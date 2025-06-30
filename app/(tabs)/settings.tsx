@@ -6,7 +6,9 @@ import {
   Switch, 
   TouchableOpacity, 
   Alert,
-  ScrollView 
+  ScrollView,
+  TextInput,
+  Modal 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
@@ -15,10 +17,15 @@ import {
   Trash2, 
   Info, 
   ChevronRight,
-  User 
+  User,
+  LogOut,
+  Mail,
+  Lock,
+  LogIn
 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { restaurantService } from '@/services/restaurantService';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SettingsItem {
   id: string;
@@ -32,8 +39,14 @@ interface SettingsItem {
 }
 
 export default function SettingsScreen() {
+  const { user, signIn, signUp, signOut, loading } = useAuth();
   const [locationEnabled, setLocationEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
 
   useEffect(() => {
     loadSettings();
@@ -103,6 +116,41 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleOpenAuthModal = (signUpMode = false) => {
+    setIsSignUp(signUpMode);
+    setEmail('');
+    setPassword('');
+    setName('');
+    setShowAuthModal(true);
+  };
+
+  const handleCloseAuthModal = () => {
+    setShowAuthModal(false);
+  };
+
+  const handleAuth = async () => {
+    try {
+      if (isSignUp) {
+        await signUp(email, password, name);
+        Alert.alert('Success', 'Account created successfully! Please check your email to verify your account.');
+      } else {
+        await signIn(email, password);
+      }
+      handleCloseAuthModal();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Authentication failed');
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      Alert.alert('Success', 'You have been signed out');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Sign out failed');
+    }
+  };
+
   const settings: SettingsItem[] = [
     {
       id: 'location',
@@ -139,6 +187,18 @@ export default function SettingsScreen() {
       onPress: handleAbout,
     },
   ];
+
+  // Add authentication settings based on user state
+  if (user) {
+    settings.push({
+      id: 'signout',
+      title: 'Sign Out',
+      subtitle: 'Log out of your account',
+      icon: <LogOut size={24} color="#EF4444" />,
+      type: 'action',
+      onPress: handleSignOut,
+    });
+  }
 
   const renderSettingItem = (item: SettingsItem) => (
     <TouchableOpacity
@@ -182,13 +242,41 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.profileSection}>
-          <View style={styles.profileIcon}>
-            <User size={32} color="#FFFFFF" />
-          </View>
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>Food Explorer</Text>
-            <Text style={styles.profileEmail}>Discovering amazing restaurants</Text>
-          </View>
+          {user ? (
+            <>
+              <View style={styles.profileIcon}>
+                <User size={32} color="#FFFFFF" />
+              </View>
+              <View style={styles.profileInfo}>
+                <Text style={styles.profileName}>{user.user_metadata?.name || 'Food Explorer'}</Text>
+                <Text style={styles.profileEmail}>{user.email}</Text>
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={styles.profileIcon}>
+                <User size={32} color="#FFFFFF" />
+              </View>
+              <View style={styles.profileInfo}>
+                <Text style={styles.profileName}>Guest User</Text>
+                <Text style={styles.profileEmail}>Not signed in</Text>
+              </View>
+              <View style={styles.authButtons}>
+                <TouchableOpacity 
+                  style={styles.authButton}
+                  onPress={() => handleOpenAuthModal(false)}
+                >
+                  <Text style={styles.authButtonText}>Sign In</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.authButton, styles.signUpButton]}
+                  onPress={() => handleOpenAuthModal(true)}
+                >
+                  <Text style={styles.signUpButtonText}>Sign Up</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
 
         <View style={styles.settingsSection}>
@@ -196,6 +284,97 @@ export default function SettingsScreen() {
           {settings.map(renderSettingItem)}
         </View>
       </ScrollView>
+
+      {/* Authentication Modal */}
+      <Modal
+        visible={showAuthModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={handleCloseAuthModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {isSignUp ? 'Create Account' : 'Sign In'}
+              </Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={handleCloseAuthModal}
+              >
+                <Text style={styles.modalCloseText}>×</Text>
+              </TouchableOpacity>
+            </View>
+
+            {isSignUp && (
+              <View style={styles.inputContainer}>
+                <View style={styles.inputIcon}>
+                  <User size={20} color="#64748B" />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Your Name"
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                />
+              </View>
+            )}
+
+            <View style={styles.inputContainer}>
+              <View style={styles.inputIcon}>
+                <Mail size={20} color="#64748B" />
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Email Address"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <View style={styles.inputIcon}>
+                <Lock size={20} color="#64748B" />
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={handleAuth}
+              disabled={loading}
+            >
+              <Text style={styles.submitButtonText}>
+                {loading
+                  ? 'Please wait...'
+                  : isSignUp
+                  ? 'Create Account'
+                  : 'Sign In'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.switchModeButton}
+              onPress={() => setIsSignUp(!isSignUp)}
+            >
+              <Text style={styles.switchModeText}>
+                {isSignUp
+                  ? 'Already have an account? Sign In'
+                  : "Don't have an account? Sign Up"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -259,31 +438,68 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#64748B',
   },
-  settingsSection: {
-    marginTop: 24,
+  authButtons: {
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  },
+  authButton: {
+    paddingVertical: 8,
     paddingHorizontal: 16,
+    backgroundColor: '#FF6B35',
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  authButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#FFFFFF',
+  },
+  signUpButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#FF6B35',
+  },
+  signUpButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#FF6B35',
+  },
+  settingsSection: {
+    marginHorizontal: 16,
+    marginTop: 24,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    paddingVertical: 8,
+    marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: '#1E293B',
-    marginBottom: 12,
-    marginLeft: 8,
+    color: '#64748B',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
   settingIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 16,
   },
   settingContent: {
@@ -296,11 +512,97 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   settingSubtitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: 'Inter-Regular',
     color: '#64748B',
   },
   settingAction: {
-    marginLeft: 12,
+    marginLeft: 16,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '90%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontFamily: 'Inter-Bold',
+    color: '#1E293B',
+  },
+  modalCloseButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCloseText: {
+    fontSize: 24,
+    fontFamily: 'Inter-Bold',
+    color: '#64748B',
+    lineHeight: 30,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  inputIcon: {
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+  },
+  input: {
+    flex: 1,
+    height: 50,
+    paddingHorizontal: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#1E293B',
+  },
+  submitButton: {
+    backgroundColor: '#FF6B35',
+    borderRadius: 8,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  submitButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#FFFFFF',
+  },
+  switchModeButton: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  switchModeText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
+  }
 });
