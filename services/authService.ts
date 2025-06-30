@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { AuthResponse } from '@supabase/supabase-js';
 
 interface SignUpCredentials {
   email: string;
@@ -12,7 +13,7 @@ interface SignInCredentials {
 }
 
 class AuthService {
-  async signUp({ email, password, name }: SignUpCredentials) {
+  async signUp({ email, password, name }: SignUpCredentials): Promise<AuthResponse> {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -25,29 +26,29 @@ class AuthService {
       });
 
       if (error) throw error;
-      return data;
+      return { data, error };
     } catch (error) {
       console.error('Error signing up:', error);
       throw error;
     }
   }
 
-  async signIn({ email, password }: SignInCredentials) {
+  async signIn({ email, password }: SignInCredentials): Promise<AuthResponse> {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const response = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
-      return data;
+      if (response.error) throw response.error;
+      return response;
     } catch (error) {
       console.error('Error signing in:', error);
       throw error;
     }
   }
 
-  async signOut() {
+  async signOut(): Promise<void> {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
@@ -57,7 +58,7 @@ class AuthService {
     }
   }
 
-  async resetPassword(email: string) {
+  async resetPassword(email: string): Promise<void> {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: 'foodfindr://reset-password',

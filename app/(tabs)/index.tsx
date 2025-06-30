@@ -16,6 +16,8 @@ import { Heart, X, Star } from 'lucide-react-native';
 import { Restaurant } from '@/types/Restaurant';
 import { restaurantService } from '@/services/restaurantService';
 import { useAuth } from '@/contexts/AuthContext';
+import * as Haptics from 'expo-haptics';
+import BoltLogo from '@/components/BoltLogo';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = 120;
@@ -26,6 +28,7 @@ export default function DiscoverScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const position = useRef(new Animated.ValueXY()).current;
   const { user } = useAuth();
+  const [swipedAll, setSwipedAll] = useState(false);
 
   useEffect(() => {
     fetchRestaurants();
@@ -36,7 +39,10 @@ export default function DiscoverScreen() {
       setIsLoading(true);
       const fetchedRestaurants = await restaurantService.getNearbyRestaurants();
       setRestaurants(fetchedRestaurants);
+      setCurrentIndex(0);
+      setSwipedAll(false);
     } catch (err: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', 'Failed to fetch restaurants');
       console.error('Error fetching restaurants:', err);
     } finally {
@@ -48,6 +54,7 @@ export default function DiscoverScreen() {
     const restaurant = restaurants[currentIndex];
     
     if (direction === 'right' && restaurant) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       restaurantService.likeRestaurant(restaurant)
         .then(() => {
           console.log('Restaurant liked:', restaurant.name);
@@ -55,6 +62,8 @@ export default function DiscoverScreen() {
         .catch(error => {
           console.error('Error liking restaurant:', error);
         });
+    } else {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     
     Animated.timing(position, {
@@ -66,9 +75,8 @@ export default function DiscoverScreen() {
       setCurrentIndex((prevIndex) => {
         const nextIndex = prevIndex + 1;
         if (nextIndex >= restaurants.length) {
-          // Fetch more when we're at the end
-          fetchRestaurants();
-          return 0;
+          setSwipedAll(true);
+          return prevIndex; // Keep at the last index
         }
         return nextIndex;
       });
@@ -125,12 +133,31 @@ export default function DiscoverScreen() {
       );
     }
 
-    if (restaurants.length === 0 || currentIndex >= restaurants.length) {
+    if (restaurants.length === 0) {
       return (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No more restaurants</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchRestaurants}>
+          <Text style={styles.emptyText}>No restaurants found</Text>
+          <TouchableOpacity 
+            style={styles.retryButton} 
+            onPress={fetchRestaurants}
+            activeOpacity={0.7}
+          >
             <Text style={styles.retryButtonText}>Refresh</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (swipedAll) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>You've seen all restaurants</Text>
+          <TouchableOpacity 
+            style={styles.retryButton} 
+            onPress={fetchRestaurants}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.retryButtonText}>Start Over</Text>
           </TouchableOpacity>
         </View>
       );
@@ -142,7 +169,11 @@ export default function DiscoverScreen() {
       return (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Restaurant data unavailable</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchRestaurants}>
+          <TouchableOpacity 
+            style={styles.retryButton} 
+            onPress={fetchRestaurants}
+            activeOpacity={0.7}
+          >
             <Text style={styles.retryButtonText}>Refresh</Text>
           </TouchableOpacity>
         </View>
@@ -207,7 +238,7 @@ export default function DiscoverScreen() {
   };
 
   const renderActionButtons = () => {
-    if (isLoading || restaurants.length === 0 || currentIndex >= restaurants.length) {
+    if (isLoading || restaurants.length === 0 || swipedAll || currentIndex >= restaurants.length) {
       return null;
     }
 
@@ -216,6 +247,7 @@ export default function DiscoverScreen() {
         <TouchableOpacity
           style={[styles.actionButton, styles.dislikeButton]}
           onPress={() => handleSwipe('left')}
+          activeOpacity={0.7}
         >
           <X size={24} color="#FFFFFF" />
         </TouchableOpacity>
@@ -223,6 +255,7 @@ export default function DiscoverScreen() {
         <TouchableOpacity
           style={[styles.actionButton, styles.likeButton]}
           onPress={() => handleSwipe('right')}
+          activeOpacity={0.7}
         >
           <Heart size={24} color="#FFFFFF" />
         </TouchableOpacity>
@@ -233,6 +266,7 @@ export default function DiscoverScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
+        <BoltLogo size="small" />
         <Text style={styles.headerTitle}>FoodFindr</Text>
       </View>
       
@@ -248,14 +282,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   header: {
-    padding: 24,
-    paddingBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    padding: 16,
+    paddingBottom: 8,
   },
   headerTitle: {
-    fontSize: 28,
-    fontFamily: 'Inter-Bold',
+    fontSize: 24,
+    fontWeight: 'bold',
     color: '#FF6B35',
+    marginLeft: 12,
   },
   cardContainer: {
     flex: 1,
@@ -285,7 +322,7 @@ const styles = StyleSheet.create({
   },
   restaurantName: {
     fontSize: 22,
-    fontFamily: 'Inter-Bold',
+    fontWeight: 'bold',
     color: '#1A202C',
     marginBottom: 8,
   },
@@ -296,13 +333,12 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 14,
-    fontFamily: 'Inter-Medium',
+    fontWeight: '500',
     color: '#4A5568',
     marginLeft: 6,
   },
   description: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
     color: '#64748B',
     marginTop: 8,
   },
@@ -320,7 +356,7 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
+    fontWeight: '500',
     color: '#4A5568',
   },
   actionContainer: {
@@ -369,7 +405,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    fontFamily: 'Inter-Medium',
+    fontWeight: '500',
     color: '#64748B',
   },
   emptyContainer: {
@@ -380,7 +416,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    fontFamily: 'Inter-Medium',
+    fontWeight: '500',
     color: '#64748B',
     textAlign: 'center',
     marginBottom: 16,
@@ -390,10 +426,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   retryButtonText: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
     color: '#FFFFFF',
   },
 });

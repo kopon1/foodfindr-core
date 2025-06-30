@@ -6,7 +6,9 @@ import {
   Switch, 
   TouchableOpacity, 
   Alert,
-  ScrollView
+  ScrollView,
+  Image,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
@@ -21,6 +23,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { restaurantService } from '@/services/restaurantService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import BoltLogo from '@/components/BoltLogo';
 
 interface SettingsItem {
   id: string;
@@ -34,8 +38,10 @@ interface SettingsItem {
 }
 
 export default function SettingsScreen() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, refreshSession } = useAuth();
   const [locationEnabled, setLocationEnabled] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -56,6 +62,7 @@ export default function SettingsScreen() {
 
   const handleLocationToggle = async (value: boolean) => {
     try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setLocationEnabled(value);
       await AsyncStorage.setItem('locationEnabled', JSON.stringify(value));
     } catch (error) {
@@ -64,6 +71,7 @@ export default function SettingsScreen() {
   };
 
   const handleClearLikedRestaurants = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
       'Clear Liked Restaurants',
       'Are you sure you want to remove all liked restaurants?',
@@ -74,11 +82,16 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              setIsLoading(true);
               await restaurantService.clearAllLikedRestaurants();
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               Alert.alert('Success', 'All liked restaurants have been cleared.');
             } catch (error) {
               console.error('Error clearing liked restaurants:', error);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
               Alert.alert('Error', 'Failed to clear liked restaurants.');
+            } finally {
+              setIsLoading(false);
             }
           },
         },
@@ -86,7 +99,22 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleRefreshAccount = async () => {
+    try {
+      setIsRefreshing(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await refreshSession();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      console.error('Error refreshing account:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const handleAbout = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Alert.alert(
       'About FoodFindr',
       'FoodFindr v1.0.0\n\nDiscover amazing restaurants with a simple swipe. Built with React Native and Expo.\n\n© 2025 FoodFindr'
@@ -94,6 +122,7 @@ export default function SettingsScreen() {
   };
 
   const handleSignOut = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
       'Sign Out',
       'Are you sure you want to sign out?',
@@ -104,10 +133,14 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              setIsLoading(true);
               await signOut();
               router.replace('/auth/login');
             } catch (error: any) {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
               Alert.alert('Error', error.message || 'Sign out failed');
+            } finally {
+              setIsLoading(false);
             }
           },
         },
@@ -116,6 +149,7 @@ export default function SettingsScreen() {
   };
 
   const handleLogin = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.replace('/auth/login');
   };
 
@@ -191,13 +225,23 @@ export default function SettingsScreen() {
     </TouchableOpacity>
   );
 
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.loadingContainer} edges={['top']}>
+        <ActivityIndicator size="large" color="#FF6B35" />
+        <Text style={styles.loadingText}>Please wait...</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.header}>
+        <View style={styles.logoContainer}>
+          <BoltLogo size="medium" />
           <Text style={styles.headerTitle}>Settings</Text>
         </View>
 
@@ -210,6 +254,17 @@ export default function SettingsScreen() {
               <Text style={styles.profileName}>{user.user_metadata?.name || 'User'}</Text>
               <Text style={styles.profileEmail}>{user.email}</Text>
             </View>
+            <TouchableOpacity 
+              style={styles.refreshButton} 
+              onPress={handleRefreshAccount}
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? (
+                <ActivityIndicator size="small" color="#FF6B35" />
+              ) : (
+                <Text style={styles.refreshButtonText}>Refresh</Text>
+              )}
+            </TouchableOpacity>
           </View>
         ) : (
           <TouchableOpacity 
@@ -224,6 +279,14 @@ export default function SettingsScreen() {
         <View style={styles.settingsSection}>
           {settings.map(renderSettingItem)}
         </View>
+        
+        <View style={styles.footer}>
+          <Image
+            source={require('@/public/logotext_poweredby_360w.png')}
+            style={styles.footerLogo}
+            resizeMode="contain"
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -234,25 +297,39 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#64748B',
+  },
   scrollContent: {
     paddingBottom: 40,
   },
-  header: {
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 24,
     paddingBottom: 16,
   },
   headerTitle: {
     fontSize: 28,
-    fontFamily: 'Inter-Bold',
+    fontWeight: 'bold',
     color: '#FF6B35',
+    marginLeft: 12,
   },
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#F7FAFC',
-    marginHorizontal: 24,
+    backgroundColor: '#F8FAFC',
     borderRadius: 16,
+    marginHorizontal: 16,
+    padding: 16,
     marginBottom: 24,
   },
   profileIcon: {
@@ -262,52 +339,71 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF6B35',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
   },
   profileInfo: {
     flex: 1,
+    marginLeft: 16,
   },
   profileName: {
     fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
     color: '#1A202C',
     marginBottom: 4,
   },
   profileEmail: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
     color: '#64748B',
+  },
+  refreshButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+  },
+  refreshButtonText: {
+    fontSize: 14,
+    color: '#FF6B35',
+    fontWeight: '500',
   },
   loginButton: {
     backgroundColor: '#FF6B35',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
     borderRadius: 12,
-    alignSelf: 'stretch',
-    marginHorizontal: 24,
-    marginBottom: 24,
+    marginHorizontal: 16,
+    height: 56,
+    justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   loginButtonText: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
     color: '#FFFFFF',
   },
   settingsSection: {
-    paddingHorizontal: 24,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    marginHorizontal: 16,
+    marginBottom: 24,
+    overflow: 'hidden',
   },
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#E2E8F0',
   },
   settingIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F7FAFC',
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -317,16 +413,24 @@ const styles = StyleSheet.create({
   },
   settingTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-Medium',
+    fontWeight: '500',
     color: '#1A202C',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   settingSubtitle: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#718096',
+    color: '#64748B',
   },
   settingAction: {
     marginLeft: 16,
-  }
+  },
+  footer: {
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  footerLogo: {
+    width: 180,
+    height: 60,
+  },
 });
