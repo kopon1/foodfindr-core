@@ -26,8 +26,9 @@ import { MapPin, Star, Heart, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { Restaurant } from '@/types/Restaurant';
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const CARD_WIDTH = screenWidth - 32;
+const CARD_HEIGHT = screenHeight * 0.7;
 const SWIPE_THRESHOLD = screenWidth * 0.25;
 
 interface RestaurantCardProps {
@@ -222,7 +223,7 @@ const styles = StyleSheet.create({
   card: {
     position: 'absolute',
     width: CARD_WIDTH,
-    height: 600,
+    height: CARD_HEIGHT,
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     shadowColor: '#000',
@@ -235,6 +236,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 20,
+    resizeMode: 'cover',
   },
   gradient: {
     position: 'absolute',
@@ -357,14 +359,15 @@ const styles = StyleSheet.create({
   },
   likeIndicator: {
     position: 'absolute',
-    top: 60,
-    right: 24,
+    top: 50,
+    right: 20,
+    padding: 12,
     backgroundColor: 'rgba(78, 205, 196, 0.9)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 12,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    zIndex: 100,
     transform: [{ rotate: '15deg' }],
-    zIndex: 10,
   },
   likeText: {
     fontSize: 18,
@@ -373,14 +376,15 @@ const styles = StyleSheet.create({
   },
   nopeIndicator: {
     position: 'absolute',
-    top: 60,
-    left: 24,
+    top: 50,
+    left: 20,
+    padding: 12,
     backgroundColor: 'rgba(239, 68, 68, 0.9)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 12,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    zIndex: 100,
     transform: [{ rotate: '-15deg' }],
-    zIndex: 10,
   },
   nopeText: {
     fontSize: 18,

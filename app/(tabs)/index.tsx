@@ -4,7 +4,8 @@ import {
   StyleSheet, 
   Dimensions, 
   Text, 
-  TouchableOpacity
+  TouchableOpacity,
+  StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RestaurantCard } from '@/components/RestaurantCard';
@@ -79,12 +80,13 @@ export default function DiscoverScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>FoodFindr</Text>
       </View>
       
       <View style={styles.cardContainer}>
-        {restaurants.slice(currentIndex, currentIndex + 2).map((restaurant, index) => (
+        {restaurants.slice(currentIndex, currentIndex + 3).map((restaurant, index) => (
           <RestaurantCard
             key={restaurant.id}
             restaurant={restaurant}
@@ -92,8 +94,9 @@ export default function DiscoverScreen() {
             onSwipe={handleSwipe}
             style={{
               zIndex: restaurants.length - index,
-              transform: [{ scale: index === 0 ? 1 : 0.95 }],
-              opacity: index === 0 ? 1 : 0.8,
+              transform: [{ scale: index === 0 ? 1 : 0.95 - (index * 0.05) }],
+              opacity: index === 0 ? 1 : 0.8 - (index * 0.1),
+              top: index * 10,
             }}
           />
         ))}
@@ -109,8 +112,10 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingVertical: 12,
     alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
   headerTitle: {
     fontSize: 28,
@@ -123,6 +128,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
+    paddingTop: 20,
   },
   emptyState: {
     flex: 1,
