@@ -287,6 +287,147 @@ class RestaurantService {
           lng: -118.2468
         },
         distance: 1.2
+      },
+      // --- 10 more restaurants below ---
+      {
+        id: '21',
+        name: 'Bistro Provence',
+        imageUrl: 'https://images.pexels.com/photos/262047/pexels-photo-262047.jpeg',
+        rating: 4.7,
+        priceRange: '$$$',
+        cuisineType: ['French', 'Bistro', 'European'],
+        description: 'Elegant French bistro with classic Provençal dishes and a curated wine list.',
+        location: {
+          lat: 34.0671,
+          lng: -118.2421
+        },
+        distance: 1.5
+      },
+      {
+        id: '22',
+        name: 'Tandoori Palace',
+        imageUrl: 'https://images.pexels.com/photos/461382/pexels-photo-461382.jpeg',
+        rating: 4.5,
+        priceRange: '$$',
+        cuisineType: ['Indian', 'Tandoori', 'Asian'],
+        description: 'Traditional Indian restaurant specializing in tandoori and curry dishes.',
+        location: {
+          lat: 34.0555,
+          lng: -118.2322
+        },
+        distance: 1.8
+      },
+      {
+        id: '23',
+        name: 'Burger & Brew',
+        imageUrl: 'https://images.pexels.com/photos/70497/pexels-photo-70497.jpeg',
+        rating: 4.4,
+        priceRange: '$$',
+        cuisineType: ['American', 'Burgers', 'Bar'],
+        description: 'Craft burgers and local brews in a lively, casual setting.',
+        location: {
+          lat: 34.0528,
+          lng: -118.2511
+        },
+        distance: 0.9
+      },
+      {
+        id: '24',
+        name: 'Casa de Tapas',
+        imageUrl: 'https://images.pexels.com/photos/461382/pexels-photo-461382.jpeg',
+        rating: 4.3,
+        priceRange: '$$',
+        cuisineType: ['Spanish', 'Tapas', 'Bar'],
+        description: 'Spanish tapas bar with small plates, sangria, and live music nights.',
+        location: {
+          lat: 34.0642,
+          lng: -118.2399
+        },
+        distance: 2.0
+      },
+      {
+        id: '25',
+        name: 'Green Leaf Café',
+        imageUrl: 'https://images.pexels.com/photos/461382/pexels-photo-461382.jpeg',
+        rating: 4.6,
+        priceRange: '$$',
+        cuisineType: ['Vegetarian', 'Healthy', 'Cafe'],
+        description: 'Bright, modern café serving vegetarian and vegan breakfast and lunch options.',
+        location: {
+          lat: 34.0591,
+          lng: -118.2407
+        },
+        distance: 1.3
+      },
+      {
+        id: '26',
+        name: 'Ramen House',
+        imageUrl: 'https://images.pexels.com/photos/461382/pexels-photo-461382.jpeg',
+        rating: 4.5,
+        priceRange: '$$',
+        cuisineType: ['Japanese', 'Ramen', 'Asian'],
+        description: 'Cozy ramen shop with rich broths and a variety of noodle bowls.',
+        location: {
+          lat: 34.0602,
+          lng: -118.2432
+        },
+        distance: 1.7
+      },
+      {
+        id: '27',
+        name: 'Steakhouse Prime',
+        imageUrl: 'https://images.pexels.com/photos/675951/pexels-photo-675951.jpeg',
+        rating: 4.8,
+        priceRange: '$$$$',
+        cuisineType: ['Steakhouse', 'American', 'Fine Dining'],
+        description: 'Upscale steakhouse with prime cuts, seafood, and an extensive wine cellar.',
+        location: {
+          lat: 34.0655,
+          lng: -118.2477
+        },
+        distance: 2.5
+      },
+      {
+        id: '28',
+        name: 'Pasta Fresca',
+        imageUrl: 'https://images.pexels.com/photos/461382/pexels-photo-461382.jpeg',
+        rating: 4.4,
+        priceRange: '$$',
+        cuisineType: ['Italian', 'Pasta', 'Casual'],
+        description: 'Homemade pasta and Italian comfort food in a family-friendly atmosphere.',
+        location: {
+          lat: 34.0533,
+          lng: -118.2388
+        },
+        distance: 1.0
+      },
+      {
+        id: '29',
+        name: 'Sabor Latino',
+        imageUrl: 'https://images.pexels.com/photos/461382/pexels-photo-461382.jpeg',
+        rating: 4.3,
+        priceRange: '$$',
+        cuisineType: ['Latin American', 'Grill', 'Bar'],
+        description: 'Latin American grill with a variety of grilled meats, cocktails, and live salsa music.',
+        location: {
+          lat: 34.0572,
+          lng: -118.2361
+        },
+        distance: 1.6
+      },
+      {
+        id: '30',
+        name: 'Fish & Chips Co.',
+        imageUrl: 'https://images.pexels.com/photos/70497/pexels-photo-70497.jpeg',
+        rating: 4.2,
+        priceRange: '$$',
+        cuisineType: ['Seafood', 'British', 'Casual'],
+        description: 'Classic British fish and chips with a modern twist, plus craft beers.',
+        location: {
+          lat: 34.0519,
+          lng: -118.2455
+        },
+        distance: 0.8
       }
     ];
   }
