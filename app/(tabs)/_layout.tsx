@@ -1,53 +1,45 @@
+import React from 'react';
 import { Tabs } from 'expo-router';
+import { Home, Heart, Settings } from 'lucide-react-native';
 import { Platform } from 'react-native';
-import { Heart, Search, Settings } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false,
+        tabBarActiveTintColor: '#FF6B35',
+        tabBarInactiveTintColor: '#94A3B8',
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#F1F5F9',
-          paddingTop: 8,
-          paddingBottom: Platform.OS === 'ios' ? 24 : 8,
           height: Platform.OS === 'ios' ? 88 : 64,
+          paddingBottom: Platform.OS === 'ios' ? 28 : 12,
+          paddingTop: 12,
         },
-        tabBarActiveTintColor: '#FF6B35',
-        tabBarInactiveTintColor: '#64748B',
-        tabBarLabelStyle: {
-          fontFamily: 'Inter-Medium',
-          fontSize: 12,
-          marginTop: 4,
-        },
-      }}>
+        tabBarShowLabel: false,
+        headerShown: false,
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Discover',
-          tabBarIcon: ({ size, color }) => (
-            <Search size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="liked"
         options={{
           title: 'Liked',
-          tabBarIcon: ({ size, color }) => (
-            <Heart size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Heart size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ size, color }) => (
-            <Settings size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
         }}
       />
     </Tabs>

@@ -1,123 +1,181 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  FlatList, 
-  Image, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  Image,
   TouchableOpacity,
-  Alert 
+  Dimensions,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Trash2, MapPin, Star } from 'lucide-react-native';
-import { restaurantService } from '@/services/restaurantService';
+import { Heart, Trash2 } from 'lucide-react-native';
 import { Restaurant } from '@/types/Restaurant';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { restaurantService } from '@/services/restaurantService';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'expo-router';
+
+const { width } = Dimensions.get('window');
+const COLUMN_COUNT = 3;
+const SPACING = 8;
+const ITEM_WIDTH = (width - (SPACING * (COLUMN_COUNT + 1))) / COLUMN_COUNT;
 
 export default function LikedScreen() {
   const [likedRestaurants, setLikedRestaurants] = useState<Restaurant[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     loadLikedRestaurants();
-  }, []);
+  }, [user]);
 
   const loadLikedRestaurants = async () => {
     try {
-      setLoading(true);
-      const liked = await restaurantService.getLikedRestaurants();
-      setLikedRestaurants(liked);
+      setIsLoading(true);
+      if (!user) {
+        setLikedRestaurants([]);
+        return;
+      }
+      
+      const restaurants = await restaurantService.getLikedRestaurants();
+      setLikedRestaurants(restaurants);
     } catch (error) {
       console.error('Error loading liked restaurants:', error);
-      Alert.alert('Error', 'Failed to load liked restaurants');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleRemoveLike = async (restaurantId: string) => {
+  const handleUnlike = async (restaurant: Restaurant) => {
     try {
-      await restaurantService.removeLikedRestaurant(restaurantId);
-      setLikedRestaurants(prev => prev.filter(r => r.id !== restaurantId));
-    } catch (error) {
-      console.error('Error removing like:', error);
-      Alert.alert('Error', 'Failed to remove restaurant');
+      await restaurantService.removeLikedRestaurant(restaurant.id);
+      setLikedRestaurants(prev => prev.filter(r => r.id !== restaurant.id));
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to remove restaurant');
     }
   };
 
-  const renderRestaurantItem = ({ item }: { item: Restaurant }) => (
-    <View style={styles.restaurantCard}>
-      <Image source={{ uri: item.imageUrl }} style={styles.restaurantImage} />
-      <View style={styles.restaurantInfo}>
-        <View style={styles.restaurantHeader}>
-          <Text style={styles.restaurantName} numberOfLines={1}>
-            {item.name || 'Unknown Restaurant'}
-          </Text>
-          <TouchableOpacity
-            style={styles.removeButton}
-            onPress={() => handleRemoveLike(item.id)}
-          >
-            <Trash2 size={20} color="#EF4444" />
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.restaurantMeta}>
-          <View style={styles.ratingContainer}>
-            <Star size={16} color="#FCD34D" fill="#FCD34D" />
-            <Text style={styles.rating}>{item.rating || '4.0'}</Text>
-          </View>
-          <Text style={styles.priceRange}>{item.priceRange || '$$'}</Text>
-        </View>
-        
-        <View style={styles.cuisineContainer}>
-          {(item.cuisineType || ['Restaurant']).map((cuisine, index) => (
-            <View key={index} style={styles.cuisineTag}>
-              <Text style={styles.cuisineText}>{cuisine}</Text>
-            </View>
-          ))}
-        </View>
-        
-        <View style={styles.locationContainer}>
-          <MapPin size={14} color="#64748B" />
-          <Text style={styles.distance}>{typeof item.distance === 'number' ? `${item.distance} mi` : `${item.distance} away`}</Text>
-        </View>
+  const handleClearAll = () => {
+    if (likedRestaurants.length === 0) return;
+    
+    Alert.alert(
+      'Clear All',
+      'Are you sure you want to remove all liked restaurants?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await restaurantService.clearAllLikedRestaurants();
+              setLikedRestaurants([]);
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to clear restaurants');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const renderItem = ({ item }: { item: Restaurant }) => (
+    <TouchableOpacity 
+      style={styles.itemContainer}
+      activeOpacity={0.8}
+    >
+      <View style={styles.imageContainer}>
+        <Image
+          source={{ uri: item.imageUrl || 'https://via.placeholder.com/150?text=No+Image' }}
+          style={styles.image}
+          resizeMode="cover"
+        />
+        <TouchableOpacity 
+          style={styles.unlikeButton}
+          onPress={() => handleUnlike(item)}
+        >
+          <Heart size={16} color="#FFFFFF" fill="#FF6B35" />
+        </TouchableOpacity>
       </View>
-    </View>
+      <Text style={styles.restaurantName} numberOfLines={1}>
+        {item.name}
+      </Text>
+      <Text style={styles.cuisineType} numberOfLines={1}>
+        {item.cuisineType.join(', ')}
+      </Text>
+    </TouchableOpacity>
   );
 
-  if (loading) {
+  const renderEmptyState = () => {
+    if (isLoading) {
+      return (
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator size="large" color="#FF6B35" />
+          <Text style={styles.emptyText}>Loading restaurants...</Text>
+        </View>
+      );
+    }
+
+    if (!user) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>Sign in to save restaurants</Text>
+          <Text style={styles.emptyText}>
+            Create an account to keep track of your favorite places
+          </Text>
+          <TouchableOpacity 
+            style={styles.signInButton}
+            onPress={() => router.push('/auth/login')}
+          >
+            <Text style={styles.signInButtonText}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
     return (
-      <SafeAreaView style={styles.container}>
-        <LoadingSpinner />
-      </SafeAreaView>
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyTitle}>No liked restaurants yet</Text>
+        <Text style={styles.emptyText}>
+          Swipe right on restaurants you like to save them here
+        </Text>
+        <TouchableOpacity 
+          style={styles.exploreButton}
+          onPress={() => router.push('/')}
+        >
+          <Text style={styles.exploreButtonText}>Explore Restaurants</Text>
+        </TouchableOpacity>
+      </View>
     );
-  }
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Liked Restaurants</Text>
-        <Text style={styles.headerSubtitle}>
-          {likedRestaurants.length} restaurant{likedRestaurants.length !== 1 ? 's' : ''}
-        </Text>
+        <Text style={styles.headerTitle}>Liked</Text>
+        {likedRestaurants.length > 0 && (
+          <TouchableOpacity 
+            style={styles.clearButton} 
+            onPress={handleClearAll}
+          >
+            <Trash2 size={18} color="#FF6B35" />
+          </TouchableOpacity>
+        )}
       </View>
 
-      {likedRestaurants.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>No liked restaurants yet</Text>
-          <Text style={styles.emptySubtitle}>
-            Start swiping to discover amazing places!
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={likedRestaurants}
-          renderItem={renderRestaurantItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+      <FlatList
+        data={likedRestaurants}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        numColumns={COLUMN_COUNT}
+        contentContainerStyle={styles.listContent}
+        columnWrapperStyle={styles.columnWrapper}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={renderEmptyState}
+      />
     </SafeAreaView>
   );
 }
@@ -125,131 +183,109 @@ export default function LikedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
   },
   header: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 24,
+    paddingBottom: 16,
   },
   headerTitle: {
     fontSize: 28,
     fontFamily: 'Inter-Bold',
-    color: '#1E293B',
-    marginBottom: 4,
+    color: '#FF6B35',
   },
-  headerSubtitle: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#64748B',
+  clearButton: {
+    padding: 8,
   },
-  listContainer: {
-    padding: 16,
+  listContent: {
+    padding: SPACING,
+    paddingBottom: 40,
+    flexGrow: 1,
   },
-  restaurantCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  restaurantImage: {
-    width: '100%',
-    height: 200,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-  },
-  restaurantInfo: {
-    padding: 16,
-  },
-  restaurantHeader: {
-    flexDirection: 'row',
+  columnWrapper: {
     justifyContent: 'space-between',
-    alignItems: 'center',
+    marginBottom: SPACING,
+  },
+  itemContainer: {
+    width: ITEM_WIDTH,
+    marginHorizontal: SPACING / 2,
+  },
+  imageContainer: {
+    position: 'relative',
+    borderRadius: 12,
+    overflow: 'hidden',
+    aspectRatio: 1,
     marginBottom: 8,
   },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  unlikeButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   restaurantName: {
-    fontSize: 18,
+    fontSize: 14,
     fontFamily: 'Inter-SemiBold',
-    color: '#1E293B',
-    flex: 1,
-    marginRight: 12,
+    color: '#1A202C',
+    marginBottom: 2,
   },
-  removeButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#FEF2F2',
-  },
-  restaurantMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  rating: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#1E293B',
-    marginLeft: 4,
-  },
-  priceRange: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#4ECDC4',
-  },
-  cuisineContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 12,
-  },
-  cuisineTag: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 8,
-    marginBottom: 4,
-  },
-  cuisineText: {
+  cuisineType: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
-    color: '#64748B',
-  },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  distance: {
-    fontSize: 14,
     fontFamily: 'Inter-Regular',
     color: '#64748B',
-    marginLeft: 4,
   },
-  emptyState: {
+  emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
   },
   emptyTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontFamily: 'Inter-Bold',
-    color: '#1E293B',
+    color: '#1A202C',
     textAlign: 'center',
     marginBottom: 8,
   },
-  emptySubtitle: {
+  emptyText: {
     fontSize: 16,
     fontFamily: 'Inter-Regular',
     color: '#64748B',
     textAlign: 'center',
+    marginBottom: 24,
+  },
+  signInButton: {
+    backgroundColor: '#FF6B35',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  signInButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#FFFFFF',
+  },
+  exploreButton: {
+    backgroundColor: '#FF6B35',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  exploreButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#FFFFFF',
   },
 });

@@ -3,90 +3,50 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   StyleSheet,
+  TouchableOpacity,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
   ScrollView,
-  Alert
 } from 'react-native';
-import { Link, useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { useRouter, Link } from 'expo-router';
+import { Mail, Lock, User } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import BoltLogo from '@/components/BoltLogo';
 
 export default function SignupScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<{ 
-    name?: string; 
-    email?: string; 
-    password?: string;
-    confirmPassword?: string;
-  }>({});
-  
+  const [isLoading, setIsLoading] = useState(false);
   const { signUp } = useAuth();
   const router = useRouter();
 
-  const validateForm = () => {
-    const newErrors: { 
-      name?: string; 
-      email?: string; 
-      password?: string;
-      confirmPassword?: string;
-    } = {};
-    
-    // Name validation
-    if (!name) {
-      newErrors.name = 'Name is required';
-    }
-    
-    // Email validation
-    if (!email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Email is invalid';
-    }
-    
-    // Password validation
-    if (!password) {
-      newErrors.password = 'Password is required';
-    } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-    
-    // Confirm password validation
-    if (!confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
-    } else if (confirmPassword !== password) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleSignup = async () => {
-    if (!validateForm()) return;
-    
+    if (!name || !email || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
+      return;
+    }
+
     try {
-      setIsSubmitting(true);
+      setIsLoading(true);
       await signUp(email, password, name);
       Alert.alert(
         'Success',
-        'Your account has been created! Please check your email to verify your account.',
-        [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
+        'Your account has been created. Please check your email for verification.',
+        [{ text: 'OK', onPress: () => router.push('/auth/login') }]
       );
     } catch (error: any) {
-      Alert.alert(
-        'Signup Failed',
-        error.message || 'An error occurred during signup. Please try again.'
-      );
+      Alert.alert('Signup Failed', error.message || 'Please try again with different credentials');
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
@@ -94,93 +54,77 @@ export default function SignupScreen() {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 50 : 0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
-      <StatusBar style="dark" />
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Sign up to get started</Text>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.logoContainer}>
+          <BoltLogo size="large" />
+          <Text style={styles.appName}>FoodFindr</Text>
         </View>
-        
+
+        <Text style={styles.title}>Create Account</Text>
+        <Text style={styles.subtitle}>Sign up to get started</Text>
+
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Name</Text>
+            <User size={20} color="#64748B" style={styles.inputIcon} />
             <TextInput
-              style={[styles.input, errors.name ? styles.inputError : null]}
-              placeholder="Enter your name"
+              style={styles.input}
+              placeholder="Full Name"
               value={name}
               onChangeText={setName}
-              autoCapitalize="words"
-              autoComplete="name"
-              placeholderTextColor="#A0AEC0"
+              placeholderTextColor="#94A3B8"
             />
-            {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
           </View>
-          
+
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
+            <Mail size={20} color="#64748B" style={styles.inputIcon} />
             <TextInput
-              style={[styles.input, errors.email ? styles.inputError : null]}
-              placeholder="Enter your email"
+              style={styles.input}
+              placeholder="Email"
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
-              autoComplete="email"
-              placeholderTextColor="#A0AEC0"
+              placeholderTextColor="#94A3B8"
             />
-            {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
           </View>
-          
+
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
+            <Lock size={20} color="#64748B" style={styles.inputIcon} />
             <TextInput
-              style={[styles.input, errors.password ? styles.inputError : null]}
-              placeholder="Create a password"
+              style={styles.input}
+              placeholder="Password (min 6 characters)"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
-              autoComplete="new-password"
-              placeholderTextColor="#A0AEC0"
+              placeholderTextColor="#94A3B8"
             />
-            {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
           </View>
-          
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Confirm Password</Text>
-            <TextInput
-              style={[styles.input, errors.confirmPassword ? styles.inputError : null]}
-              placeholder="Confirm your password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              autoComplete="new-password"
-              placeholderTextColor="#A0AEC0"
-            />
-            {errors.confirmPassword ? <Text style={styles.errorText}>{errors.confirmPassword}</Text> : null}
-          </View>
-          
+
           <TouchableOpacity 
-            style={styles.button} 
+            style={styles.signupButton}
             onPress={handleSignup}
-            disabled={isSubmitting}
+            disabled={isLoading}
           >
-            {isSubmitting ? (
+            {isLoading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.buttonText}>Create Account</Text>
+              <Text style={styles.signupButtonText}>Create Account</Text>
             )}
           </TouchableOpacity>
-          
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
-            <Link href="/auth/login" asChild>
-              <TouchableOpacity>
-                <Text style={styles.footerLink}>Sign In</Text>
-              </TouchableOpacity>
-            </Link>
-          </View>
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Already have an account?</Text>
+          <Link href="/auth/login" asChild>
+            <TouchableOpacity>
+              <Text style={styles.loginLink}>Sign In</Text>
+            </TouchableOpacity>
+          </Link>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -192,13 +136,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  scrollContainer: {
+  scrollContent: {
     flexGrow: 1,
     padding: 24,
     justifyContent: 'center',
   },
-  header: {
-    marginBottom: 32,
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  appName: {
+    fontSize: 24,
+    fontFamily: 'Inter-Bold',
+    color: '#FF6B35',
+    marginTop: 16,
   },
   title: {
     fontSize: 28,
@@ -209,65 +160,58 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#718096',
+    color: '#64748B',
+    marginBottom: 32,
   },
   form: {
-    width: '100%',
+    marginBottom: 24,
   },
   inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#4A5568',
-    marginBottom: 8,
-  },
-  input: {
-    height: 50,
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 8,
+    borderRadius: 12,
     paddingHorizontal: 16,
+    marginBottom: 16,
+    height: 56,
+    backgroundColor: '#F8FAFC',
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
     fontSize: 16,
     fontFamily: 'Inter-Regular',
-    backgroundColor: '#F7FAFC',
     color: '#1A202C',
   },
-  inputError: {
-    borderColor: '#E53E3E',
-  },
-  errorText: {
-    color: '#E53E3E',
-    fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    marginTop: 4,
-  },
-  button: {
-    height: 50,
+  signupButton: {
     backgroundColor: '#FF6B35',
-    borderRadius: 8,
+    borderRadius: 12,
+    height: 56,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 8,
   },
-  buttonText: {
-    color: '#FFFFFF',
+  signupButtonText: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
+    color: '#FFFFFF',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
+    alignItems: 'center',
   },
   footerText: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#718096',
+    color: '#64748B',
+    marginRight: 4,
   },
-  footerLink: {
-    fontSize: 14,
+  loginLink: {
+    fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#FF6B35',
   },

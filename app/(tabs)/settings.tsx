@@ -11,13 +11,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
   MapPin, 
-  Bell, 
   Trash2, 
   Info, 
   ChevronRight,
   User,
-  LogOut,
-  Mail
+  LogOut
 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { restaurantService } from '@/services/restaurantService';
@@ -29,7 +27,7 @@ interface SettingsItem {
   title: string;
   subtitle?: string;
   icon: React.ReactNode;
-  type: 'toggle' | 'action' | 'info';
+  type: 'toggle' | 'action';
   value?: boolean;
   onPress?: () => void;
   onToggle?: (value: boolean) => void;
@@ -38,7 +36,6 @@ interface SettingsItem {
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
   const [locationEnabled, setLocationEnabled] = useState(true);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -48,13 +45,9 @@ export default function SettingsScreen() {
   const loadSettings = async () => {
     try {
       const locationSetting = await AsyncStorage.getItem('locationEnabled');
-      const notificationSetting = await AsyncStorage.getItem('notificationsEnabled');
       
       if (locationSetting !== null) {
         setLocationEnabled(JSON.parse(locationSetting));
-      }
-      if (notificationSetting !== null) {
-        setNotificationsEnabled(JSON.parse(notificationSetting));
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -70,19 +63,10 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleNotificationToggle = async (value: boolean) => {
-    try {
-      setNotificationsEnabled(value);
-      await AsyncStorage.setItem('notificationsEnabled', JSON.stringify(value));
-    } catch (error) {
-      console.error('Error saving notification setting:', error);
-    }
-  };
-
   const handleClearLikedRestaurants = () => {
     Alert.alert(
       'Clear Liked Restaurants',
-      'Are you sure you want to remove all liked restaurants? This action cannot be undone.',
+      'Are you sure you want to remove all liked restaurants?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -140,19 +124,10 @@ export default function SettingsScreen() {
       id: 'location',
       title: 'Location Services',
       subtitle: 'Find restaurants near you',
-      icon: <MapPin size={24} color="#4ECDC4" />,
+      icon: <MapPin size={24} color="#FF6B35" />,
       type: 'toggle',
       value: locationEnabled,
       onToggle: handleLocationToggle,
-    },
-    {
-      id: 'notifications',
-      title: 'Push Notifications',
-      subtitle: 'Get notified about new restaurants',
-      icon: <Bell size={24} color="#FF6B35" />,
-      type: 'toggle',
-      value: notificationsEnabled,
-      onToggle: handleNotificationToggle,
     },
     {
       id: 'clear',
@@ -182,15 +157,6 @@ export default function SettingsScreen() {
       type: 'action',
       onPress: handleSignOut,
     });
-  } else {
-    settings.push({
-      id: 'signin',
-      title: 'Sign In',
-      subtitle: 'Log in to your account',
-      icon: <LogOut size={24} color="#4ECDC4" />,
-      type: 'action',
-      onPress: handleLogin,
-    });
   }
 
   const renderSettingItem = (item: SettingsItem) => (
@@ -199,6 +165,7 @@ export default function SettingsScreen() {
       style={styles.settingItem}
       onPress={item.onPress}
       disabled={item.type === 'toggle'}
+      activeOpacity={item.type === 'action' ? 0.7 : 1}
     >
       <View style={styles.settingIcon}>
         {item.icon}
@@ -214,7 +181,7 @@ export default function SettingsScreen() {
           <Switch
             value={item.value}
             onValueChange={item.onToggle}
-            trackColor={{ false: '#F1F5F9', true: '#4ECDC4' }}
+            trackColor={{ false: '#F1F5F9', true: '#FF6B35' }}
             thumbColor={item.value ? '#FFFFFF' : '#64748B'}
           />
         ) : (
@@ -225,36 +192,36 @@ export default function SettingsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Settings</Text>
-          <Text style={styles.headerSubtitle}>
-            Customize your FoodFindr experience
-          </Text>
         </View>
 
-        <View style={styles.profileSection}>
-          {user ? (
-            <>
-              <View style={styles.profileIcon}>
-                <User size={32} color="#FFFFFF" />
-              </View>
-              <View style={styles.profileInfo}>
-                <Text style={styles.profileName}>{user.user_metadata?.name || 'User'}</Text>
-                <Text style={styles.profileEmail}>{user.email}</Text>
-              </View>
-            </>
-          ) : (
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-              <Mail size={24} color="#FFFFFF" />
-              <Text style={styles.loginButtonText}>Sign In</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        {user ? (
+          <View style={styles.profileSection}>
+            <View style={styles.profileIcon}>
+              <User size={32} color="#FFFFFF" />
+            </View>
+            <View style={styles.profileInfo}>
+              <Text style={styles.profileName}>{user.user_metadata?.name || 'User'}</Text>
+              <Text style={styles.profileEmail}>{user.email}</Text>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity 
+            style={styles.loginButton} 
+            onPress={handleLogin}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.loginButtonText}>Sign In to Your Account</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.settingsSection}>
-          <Text style={styles.sectionTitle}>App Settings</Text>
           {settings.map(renderSettingItem)}
         </View>
       </ScrollView>
@@ -267,6 +234,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  scrollContent: {
+    paddingBottom: 40,
+  },
   header: {
     padding: 24,
     paddingBottom: 16,
@@ -274,18 +244,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontFamily: 'Inter-Bold',
-    color: '#1A202C',
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#718096',
+    color: '#FF6B35',
   },
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 24,
+    padding: 20,
     backgroundColor: '#F7FAFC',
     marginHorizontal: 24,
     borderRadius: 16,
@@ -295,7 +259,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#4ECDC4',
+    backgroundColor: '#FF6B35',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -315,33 +279,22 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   loginButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#4ECDC4',
-    paddingVertical: 12,
+    backgroundColor: '#FF6B35',
+    paddingVertical: 16,
     paddingHorizontal: 20,
-    borderRadius: 8,
-    alignSelf: 'center',
-    width: '100%',
-    justifyContent: 'center',
+    borderRadius: 12,
+    alignSelf: 'stretch',
+    marginHorizontal: 24,
+    marginBottom: 24,
+    alignItems: 'center',
   },
   loginButtonText: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#FFFFFF',
-    marginLeft: 12,
   },
   settingsSection: {
     paddingHorizontal: 24,
-    paddingBottom: 32,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: '#64748B',
-    marginBottom: 16,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
   },
   settingItem: {
     flexDirection: 'row',
