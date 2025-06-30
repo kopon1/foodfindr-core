@@ -4,16 +4,12 @@ import {
   StyleSheet, 
   Dimensions, 
   Text, 
-  Alert,
-  Platform,
   TouchableOpacity
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Location from 'expo-location';
 import { RestaurantCard } from '@/components/RestaurantCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { restaurantService } from '@/services/restaurantService';
-import { locationService } from '@/services/locationService';
 import { Restaurant } from '@/types/Restaurant';
 
 const { width, height } = Dimensions.get('window');
@@ -22,7 +18,6 @@ export default function DiscoverScreen() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [locationError, setLocationError] = useState<string | null>(null);
 
   useEffect(() => {
     initializeApp();
@@ -32,33 +27,12 @@ export default function DiscoverScreen() {
     try {
       setLoading(true);
       
-      // Request location permission
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      // Load hardcoded restaurants
+      const hardcodedRestaurants = await restaurantService.getNearbyRestaurants();
+      setRestaurants(hardcodedRestaurants);
       
-      if (status !== 'granted') {
-        setLocationError('Location permission denied');
-        // Load restaurants without location
-        const mockRestaurants = await restaurantService.getNearbyRestaurants();
-        setRestaurants(mockRestaurants);
-      } else {
-        // Get user location and nearby restaurants
-        const location = await locationService.getCurrentLocation();
-        const nearbyRestaurants = await restaurantService.getNearbyRestaurants(location);
-        
-        console.log(`Discover screen received ${nearbyRestaurants.length} restaurants`);
-        
-        if (nearbyRestaurants.length === 0) {
-          Alert.alert(
-            'No Restaurants Found',
-            'We couldn\'t find any restaurants in your area. Please try again later or check your Foursquare API key.',
-          );
-        }
-        
-        setRestaurants(nearbyRestaurants);
-      }
     } catch (error) {
       console.error('Error initializing app:', error);
-      Alert.alert('Error', 'Failed to load restaurants. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -74,17 +48,6 @@ export default function DiscoverScreen() {
     
     // Move to next restaurant
     setCurrentIndex(prev => prev + 1);
-    
-    // Load more restaurants if we're near the end
-    if (currentIndex >= restaurants.length - 2) {
-      try {
-        const location = await locationService.getCurrentLocation();
-        const moreRestaurants = await restaurantService.getNearbyRestaurants(location);
-        setRestaurants(prev => [...prev, ...moreRestaurants]);
-      } catch (error) {
-        console.error('Error loading more restaurants:', error);
-      }
-    }
   };
 
   if (loading) {
@@ -118,9 +81,6 @@ export default function DiscoverScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>FoodFindr</Text>
-        {locationError && (
-          <Text style={styles.locationError}>{locationError}</Text>
-        )}
       </View>
       
       <View style={styles.cardContainer}>
@@ -157,12 +117,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Bold',
     color: '#FF6B35',
     marginBottom: 4,
-  },
-  locationError: {
-    fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: '#EF4444',
-    textAlign: 'center',
   },
   cardContainer: {
     flex: 1,
