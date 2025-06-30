@@ -146,6 +146,147 @@ class RestaurantService {
           lng: -118.2480
         },
         distance: 2.0
+      },
+      // --- 10 more restaurants below ---
+      {
+        id: '11',
+        name: 'Urban Vegan Kitchen',
+        imageUrl: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg',
+        rating: 4.5,
+        priceRange: '$$',
+        cuisineType: ['Vegan', 'Healthy', 'American'],
+        description: 'Trendy vegan spot serving creative plant-based dishes and smoothies in a modern, eco-friendly space.',
+        location: {
+          lat: 34.0611,
+          lng: -118.2460
+        },
+        distance: 1.1
+      },
+      {
+        id: '12',
+        name: 'Pho Saigon',
+        imageUrl: 'https://images.pexels.com/photos/461382/pexels-photo-461382.jpeg',
+        rating: 4.3,
+        priceRange: '$',
+        cuisineType: ['Vietnamese', 'Pho', 'Asian'],
+        description: 'Classic Vietnamese eatery specializing in pho, banh mi, and other traditional noodle soups.',
+        location: {
+          lat: 34.0577,
+          lng: -118.2412
+        },
+        distance: 1.6
+      },
+      {
+        id: '13',
+        name: 'BBQ Smokehouse',
+        imageUrl: 'https://images.pexels.com/photos/675951/pexels-photo-675951.jpeg',
+        rating: 4.6,
+        priceRange: '$$',
+        cuisineType: ['BBQ', 'American', 'Grill'],
+        description: 'Rustic smokehouse offering slow-cooked barbecue meats, ribs, and classic Southern sides.',
+        location: {
+          lat: 34.0599,
+          lng: -118.2377
+        },
+        distance: 2.2
+      },
+      {
+        id: '14',
+        name: 'Tapas & Wine Bar',
+        imageUrl: 'https://images.pexels.com/photos/461382/pexels-photo-461382.jpeg',
+        rating: 4.4,
+        priceRange: '$$',
+        cuisineType: ['Spanish', 'Tapas', 'Wine Bar'],
+        description: 'Cozy Spanish bar serving a variety of tapas, paella, and an extensive selection of wines.',
+        location: {
+          lat: 34.0632,
+          lng: -118.2401
+        },
+        distance: 1.9
+      },
+      {
+        id: '15',
+        name: 'Bagel Bros',
+        imageUrl: 'https://images.pexels.com/photos/461382/pexels-photo-461382.jpeg',
+        rating: 4.2,
+        priceRange: '$',
+        cuisineType: ['Bakery', 'Breakfast', 'Cafe'],
+        description: 'Popular breakfast spot known for fresh bagels, sandwiches, and artisan coffee.',
+        location: {
+          lat: 34.0515,
+          lng: -118.2499
+        },
+        distance: 0.7
+      },
+      {
+        id: '16',
+        name: 'Korean BBQ House',
+        imageUrl: 'https://images.pexels.com/photos/461382/pexels-photo-461382.jpeg',
+        rating: 4.7,
+        priceRange: '$$$',
+        cuisineType: ['Korean', 'BBQ', 'Asian'],
+        description: 'Lively Korean BBQ restaurant with table grills, marinated meats, and a variety of banchan.',
+        location: {
+          lat: 34.0566,
+          lng: -118.2444
+        },
+        distance: 1.4
+      },
+      {
+        id: '17',
+        name: 'Falafel Express',
+        imageUrl: 'https://images.pexels.com/photos/461382/pexels-photo-461382.jpeg',
+        rating: 4.3,
+        priceRange: '$',
+        cuisineType: ['Middle Eastern', 'Falafel', 'Vegetarian'],
+        description: 'Quick-service spot for falafel wraps, hummus bowls, and Mediterranean salads.',
+        location: {
+          lat: 34.0588,
+          lng: -118.2366
+        },
+        distance: 1.0
+      },
+      {
+        id: '18',
+        name: 'The Pancake House',
+        imageUrl: 'https://images.pexels.com/photos/376464/pexels-photo-376464.jpeg',
+        rating: 4.5,
+        priceRange: '$',
+        cuisineType: ['Breakfast', 'American', 'Family'],
+        description: 'Family-friendly diner famous for fluffy pancakes, omelets, and hearty brunch plates.',
+        location: {
+          lat: 34.0542,
+          lng: -118.2477
+        },
+        distance: 0.6
+      },
+      {
+        id: '19',
+        name: 'Sushi Zen',
+        imageUrl: 'https://images.pexels.com/photos/357756/pexels-photo-357756.jpeg',
+        rating: 4.8,
+        priceRange: '$$$',
+        cuisineType: ['Japanese', 'Sushi', 'Seafood'],
+        description: 'Modern sushi bar with creative rolls, sashimi, and omakase tasting menus.',
+        location: {
+          lat: 34.0620,
+          lng: -118.2415
+        },
+        distance: 2.3
+      },
+      {
+        id: '20',
+        name: 'Gourmet Pizza Co.',
+        imageUrl: 'https://images.pexels.com/photos/1437267/pexels-photo-1437267.jpeg',
+        rating: 4.6,
+        priceRange: '$$',
+        cuisineType: ['Pizza', 'Italian', 'Casual'],
+        description: 'Trendy pizzeria serving wood-fired pizzas, salads, and craft beers in a lively setting.',
+        location: {
+          lat: 34.0537,
+          lng: -118.2468
+        },
+        distance: 1.2
       }
     ];
   }
