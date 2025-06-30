@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Heart, Trash2 } from 'lucide-react-native';
 import { Restaurant } from '@/types/Restaurant';
 import { restaurantService } from '@/services/restaurantService';
-import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 3;
@@ -25,21 +25,18 @@ const ITEM_WIDTH = (width - (SPACING * (COLUMN_COUNT + 1))) / COLUMN_COUNT;
 export default function LikedScreen() {
   const [likedRestaurants, setLikedRestaurants] = useState<Restaurant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    loadLikedRestaurants();
-  }, [user]);
+  // Reload liked restaurants every time the screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      loadLikedRestaurants();
+    }, [])
+  );
 
   const loadLikedRestaurants = async () => {
     try {
       setIsLoading(true);
-      if (!user) {
-        setLikedRestaurants([]);
-        return;
-      }
-      
       const restaurants = await restaurantService.getLikedRestaurants();
       setLikedRestaurants(restaurants);
     } catch (error) {
@@ -119,23 +116,6 @@ export default function LikedScreen() {
       );
     }
 
-    if (!user) {
-      return (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>Sign in to save restaurants</Text>
-          <Text style={styles.emptyText}>
-            Create an account to keep track of your favorite places
-          </Text>
-          <TouchableOpacity 
-            style={styles.signInButton}
-            onPress={() => router.push('/auth/login')}
-          >
-            <Text style={styles.signInButtonText}>Sign In</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyTitle}>No liked restaurants yet</Text>
@@ -154,6 +134,13 @@ export default function LikedScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.logoContainer}>
+        <Image
+          source={require('@/public/logotext_poweredby_360w.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+      </View>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Liked</Text>
         {likedRestaurants.length > 0 && (
@@ -185,6 +172,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  logoContainer: {
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  logo: {
+    width: 200,
+    height: 60,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -194,8 +190,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 28,
-    fontFamily: 'Inter-Bold',
     color: '#FF6B35',
+    fontWeight: 'bold',
   },
   clearButton: {
     padding: 8,
@@ -237,13 +233,12 @@ const styles = StyleSheet.create({
   },
   restaurantName: {
     fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
     color: '#1A202C',
     marginBottom: 2,
   },
   cuisineType: {
     fontSize: 12,
-    fontFamily: 'Inter-Regular',
     color: '#64748B',
   },
   emptyContainer: {
@@ -254,28 +249,16 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontFamily: 'Inter-Bold',
+    fontWeight: 'bold',
     color: '#1A202C',
     textAlign: 'center',
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
     color: '#64748B',
     textAlign: 'center',
     marginBottom: 24,
-  },
-  signInButton: {
-    backgroundColor: '#FF6B35',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  signInButtonText: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: '#FFFFFF',
   },
   exploreButton: {
     backgroundColor: '#FF6B35',
@@ -285,7 +268,7 @@ const styles = StyleSheet.create({
   },
   exploreButtonText: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
     color: '#FFFFFF',
   },
 });
