@@ -6,9 +6,7 @@ import {
   Switch, 
   TouchableOpacity, 
   Alert,
-  ScrollView,
-  TextInput,
-  Modal 
+  ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
@@ -19,13 +17,12 @@ import {
   ChevronRight,
   User,
   LogOut,
-  Mail,
-  Lock,
-  LogIn
+  Mail
 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { restaurantService } from '@/services/restaurantService';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'expo-router';
 
 interface SettingsItem {
   id: string;
@@ -39,14 +36,10 @@ interface SettingsItem {
 }
 
 export default function SettingsScreen() {
-  const { user, signIn, signUp, signOut, loading } = useAuth();
+  const { user, signOut } = useAuth();
   const [locationEnabled, setLocationEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const router = useRouter();
 
   useEffect(() => {
     loadSettings();
@@ -116,39 +109,30 @@ export default function SettingsScreen() {
     );
   };
 
-  const handleOpenAuthModal = (signUpMode = false) => {
-    setIsSignUp(signUpMode);
-    setEmail('');
-    setPassword('');
-    setName('');
-    setShowAuthModal(true);
-  };
-
-  const handleCloseAuthModal = () => {
-    setShowAuthModal(false);
-  };
-
-  const handleAuth = async () => {
-    try {
-      if (isSignUp) {
-        await signUp(email, password, name);
-        Alert.alert('Success', 'Account created successfully! Please check your email to verify your account.');
-      } else {
-        await signIn(email, password);
-      }
-      handleCloseAuthModal();
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Authentication failed');
-    }
-  };
-
   const handleSignOut = async () => {
-    try {
-      await signOut();
-      Alert.alert('Success', 'You have been signed out');
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Sign out failed');
-    }
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await signOut();
+              router.replace('/auth/login');
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Sign out failed');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleLogin = () => {
+    router.replace('/auth/login');
   };
 
   const settings: SettingsItem[] = [
@@ -197,6 +181,15 @@ export default function SettingsScreen() {
       icon: <LogOut size={24} color="#EF4444" />,
       type: 'action',
       onPress: handleSignOut,
+    });
+  } else {
+    settings.push({
+      id: 'signin',
+      title: 'Sign In',
+      subtitle: 'Log in to your account',
+      icon: <LogOut size={24} color="#4ECDC4" />,
+      type: 'action',
+      onPress: handleLogin,
     });
   }
 
@@ -248,133 +241,23 @@ export default function SettingsScreen() {
                 <User size={32} color="#FFFFFF" />
               </View>
               <View style={styles.profileInfo}>
-                <Text style={styles.profileName}>{user.user_metadata?.name || 'Food Explorer'}</Text>
+                <Text style={styles.profileName}>{user.user_metadata?.name || 'User'}</Text>
                 <Text style={styles.profileEmail}>{user.email}</Text>
               </View>
             </>
           ) : (
-            <>
-              <View style={styles.profileIcon}>
-                <User size={32} color="#FFFFFF" />
-              </View>
-              <View style={styles.profileInfo}>
-                <Text style={styles.profileName}>Guest User</Text>
-                <Text style={styles.profileEmail}>Not signed in</Text>
-              </View>
-              <View style={styles.authButtons}>
-                <TouchableOpacity 
-                  style={styles.authButton}
-                  onPress={() => handleOpenAuthModal(false)}
-                >
-                  <Text style={styles.authButtonText}>Sign In</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.authButton, styles.signUpButton]}
-                  onPress={() => handleOpenAuthModal(true)}
-                >
-                  <Text style={styles.signUpButtonText}>Sign Up</Text>
-                </TouchableOpacity>
-              </View>
-            </>
+            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+              <Mail size={24} color="#FFFFFF" />
+              <Text style={styles.loginButtonText}>Sign In</Text>
+            </TouchableOpacity>
           )}
         </View>
 
         <View style={styles.settingsSection}>
-          <Text style={styles.sectionTitle}>Preferences</Text>
+          <Text style={styles.sectionTitle}>App Settings</Text>
           {settings.map(renderSettingItem)}
         </View>
       </ScrollView>
-
-      {/* Authentication Modal */}
-      <Modal
-        visible={showAuthModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={handleCloseAuthModal}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {isSignUp ? 'Create Account' : 'Sign In'}
-              </Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={handleCloseAuthModal}
-              >
-                <Text style={styles.modalCloseText}>×</Text>
-              </TouchableOpacity>
-            </View>
-
-            {isSignUp && (
-              <View style={styles.inputContainer}>
-                <View style={styles.inputIcon}>
-                  <User size={20} color="#64748B" />
-                </View>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Your Name"
-                  value={name}
-                  onChangeText={setName}
-                  autoCapitalize="words"
-                />
-              </View>
-            )}
-
-            <View style={styles.inputContainer}>
-              <View style={styles.inputIcon}>
-                <Mail size={20} color="#64748B" />
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder="Email Address"
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <View style={styles.inputIcon}>
-                <Lock size={20} color="#64748B" />
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
-            </View>
-
-            <TouchableOpacity
-              style={styles.submitButton}
-              onPress={handleAuth}
-              disabled={loading}
-            >
-              <Text style={styles.submitButtonText}>
-                {loading
-                  ? 'Please wait...'
-                  : isSignUp
-                  ? 'Create Account'
-                  : 'Sign In'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.switchModeButton}
-              onPress={() => setIsSignUp(!isSignUp)}
-            >
-              <Text style={styles.switchModeText}>
-                {isSignUp
-                  ? 'Already have an account? Sign In'
-                  : "Don't have an account? Sign Up"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -382,44 +265,37 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
   },
   header: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    padding: 24,
+    paddingBottom: 16,
   },
   headerTitle: {
     fontSize: 28,
     fontFamily: 'Inter-Bold',
-    color: '#1E293B',
+    color: '#1A202C',
     marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'Inter-Regular',
-    color: '#64748B',
+    color: '#718096',
   },
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
-    marginTop: 16,
+    backgroundColor: '#F7FAFC',
+    marginHorizontal: 24,
     borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    marginBottom: 24,
   },
   profileIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#FF6B35',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#4ECDC4',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -430,7 +306,7 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 18,
     fontFamily: 'Inter-SemiBold',
-    color: '#1E293B',
+    color: '#1A202C',
     marginBottom: 4,
   },
   profileEmail: {
@@ -438,58 +314,39 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     color: '#64748B',
   },
-  authButtons: {
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-  },
-  authButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: '#FF6B35',
+  loginButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4ECDC4',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     borderRadius: 8,
-    marginBottom: 8,
+    alignSelf: 'center',
+    width: '100%',
+    justifyContent: 'center',
   },
-  authButtonText: {
-    fontSize: 14,
+  loginButtonText: {
+    fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#FFFFFF',
-  },
-  signUpButton: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#FF6B35',
-  },
-  signUpButtonText: {
-    fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
-    color: '#FF6B35',
+    marginLeft: 12,
   },
   settingsSection: {
-    marginHorizontal: 16,
-    marginTop: 24,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    paddingVertical: 8,
-    marginBottom: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 32,
   },
   sectionTitle: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#64748B',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    marginBottom: 16,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
@@ -497,7 +354,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F7FAFC',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -507,102 +364,16 @@ const styles = StyleSheet.create({
   },
   settingTitle: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: '#1E293B',
+    fontFamily: 'Inter-Medium',
+    color: '#1A202C',
     marginBottom: 2,
   },
   settingSubtitle: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: '#64748B',
+    color: '#718096',
   },
   settingAction: {
     marginLeft: 16,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    width: '90%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontFamily: 'Inter-Bold',
-    color: '#1E293B',
-  },
-  modalCloseButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalCloseText: {
-    fontSize: 24,
-    fontFamily: 'Inter-Bold',
-    color: '#64748B',
-    lineHeight: 30,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    marginBottom: 16,
-    overflow: 'hidden',
-  },
-  inputIcon: {
-    width: 50,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-  },
-  input: {
-    flex: 1,
-    height: 50,
-    paddingHorizontal: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#1E293B',
-  },
-  submitButton: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 8,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: '#FFFFFF',
-  },
-  switchModeButton: {
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  switchModeText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#64748B',
   }
 });
