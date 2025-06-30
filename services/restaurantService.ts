@@ -72,7 +72,7 @@ const HARDCODED_RESTAURANTS: Restaurant[] = [
   }
 ];
 
-const LIKED_STORAGE_KEY = 'foodfindr_liked_restaurants';
+const LIKED_STORAGE_KEY = 'likedRestaurants';
 
 class RestaurantService {
   async getNearbyRestaurants(_location?: UserLocation): Promise<Restaurant[]> {

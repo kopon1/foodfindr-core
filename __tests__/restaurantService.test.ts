@@ -9,6 +9,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 
 const mockAsyncStorage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
+const LIKED_STORAGE_KEY = 'likedRestaurants';
 
 describe('RestaurantService', () => {
   beforeEach(() => {
@@ -47,7 +48,7 @@ describe('RestaurantService', () => {
       await restaurantService.likeRestaurant(restaurant);
 
       expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
-        'likedRestaurants',
+        LIKED_STORAGE_KEY,
         JSON.stringify([restaurant])
       );
     });
@@ -116,7 +117,7 @@ describe('RestaurantService', () => {
       await restaurantService.removeLikedRestaurant('1');
 
       expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
-        'likedRestaurants',
+        LIKED_STORAGE_KEY,
         JSON.stringify([{ id: '2', name: 'Restaurant 2' }])
       );
     });
@@ -124,11 +125,14 @@ describe('RestaurantService', () => {
 
   describe('clearAllLikedRestaurants', () => {
     it('should remove all liked restaurants', async () => {
-      mockAsyncStorage.removeItem.mockResolvedValue(undefined);
+      mockAsyncStorage.setItem.mockResolvedValue(undefined);
 
       await restaurantService.clearAllLikedRestaurants();
 
-      expect(mockAsyncStorage.removeItem).toHaveBeenCalledWith('likedRestaurants');
+      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
+        LIKED_STORAGE_KEY,
+        JSON.stringify([])
+      );
     });
   });
 });

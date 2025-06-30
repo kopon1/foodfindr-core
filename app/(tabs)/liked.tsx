@@ -79,32 +79,38 @@ export default function LikedScreen() {
     );
   };
 
-  const renderItem = ({ item }: { item: Restaurant }) => (
-    <TouchableOpacity 
-      style={styles.itemContainer}
-      activeOpacity={0.8}
-    >
-      <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: item.imageUrl || 'https://via.placeholder.com/150?text=No+Image' }}
-          style={styles.image}
-          resizeMode="cover"
-        />
-        <TouchableOpacity 
-          style={styles.unlikeButton}
-          onPress={() => handleUnlike(item)}
-        >
-          <Heart size={16} color="#FFFFFF" fill="#FF6B35" />
-        </TouchableOpacity>
-      </View>
-      <Text style={styles.restaurantName} numberOfLines={1}>
-        {item.name}
-      </Text>
-      <Text style={styles.cuisineType} numberOfLines={1}>
-        {item.cuisineType.join(', ')}
-      </Text>
-    </TouchableOpacity>
-  );
+  const renderItem = ({ item }: { item: Restaurant }) => {
+    if (!item || !item.id) {
+      return null; // Skip rendering if item is null or has no id
+    }
+    
+    return (
+      <TouchableOpacity 
+        style={styles.itemContainer}
+        activeOpacity={0.8}
+      >
+        <View style={styles.imageContainer}>
+          <Image
+            source={{ uri: item.imageUrl || 'https://via.placeholder.com/150?text=No+Image' }}
+            style={styles.image}
+            resizeMode="cover"
+          />
+          <TouchableOpacity 
+            style={styles.unlikeButton}
+            onPress={() => handleUnlike(item)}
+          >
+            <Heart size={16} color="#FFFFFF" fill="#FF6B35" />
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.restaurantName} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <Text style={styles.cuisineType} numberOfLines={1}>
+          {item.cuisineType.join(', ')}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   const renderEmptyState = () => {
     if (isLoading) {

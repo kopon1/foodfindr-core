@@ -47,7 +47,7 @@ export default function DiscoverScreen() {
   const handleSwipe = (direction: 'left' | 'right') => {
     const restaurant = restaurants[currentIndex];
     
-    if (direction === 'right') {
+    if (direction === 'right' && restaurant) {
       restaurantService.likeRestaurant(restaurant)
         .then(() => {
           console.log('Restaurant liked:', restaurant.name);
@@ -137,6 +137,17 @@ export default function DiscoverScreen() {
     }
 
     const restaurant = restaurants[currentIndex];
+    
+    if (!restaurant) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Restaurant data unavailable</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchRestaurants}>
+            <Text style={styles.retryButtonText}>Refresh</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
 
     return (
       <View style={styles.cardContainer}>
