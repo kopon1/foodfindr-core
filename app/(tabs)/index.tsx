@@ -5,7 +5,8 @@ import {
   Dimensions, 
   Text, 
   Alert,
-  Platform 
+  Platform,
+  TouchableOpacity
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -43,6 +44,16 @@ export default function DiscoverScreen() {
         // Get user location and nearby restaurants
         const location = await locationService.getCurrentLocation();
         const nearbyRestaurants = await restaurantService.getNearbyRestaurants(location);
+        
+        console.log(`Discover screen received ${nearbyRestaurants.length} restaurants`);
+        
+        if (nearbyRestaurants.length === 0) {
+          Alert.alert(
+            'No Restaurants Found',
+            'We couldn\'t find any restaurants in your area. Please try again later or check your Foursquare API key.',
+          );
+        }
+        
         setRestaurants(nearbyRestaurants);
       }
     } catch (error) {
@@ -92,6 +103,12 @@ export default function DiscoverScreen() {
           <Text style={styles.emptySubtitle}>
             Check back later for new discoveries
           </Text>
+          <TouchableOpacity 
+            style={styles.reloadButton}
+            onPress={initializeApp}
+          >
+            <Text style={styles.reloadButtonText}>Try Again</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -170,6 +187,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-Regular',
     color: '#64748B',
+    textAlign: 'center',
+  },
+  reloadButton: {
+    padding: 16,
+    backgroundColor: '#FF6B35',
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  reloadButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: '#FFFFFF',
     textAlign: 'center',
   },
 });

@@ -51,7 +51,7 @@ export default function LikedScreen() {
       <View style={styles.restaurantInfo}>
         <View style={styles.restaurantHeader}>
           <Text style={styles.restaurantName} numberOfLines={1}>
-            {item.name}
+            {item.name || 'Unknown Restaurant'}
           </Text>
           <TouchableOpacity
             style={styles.removeButton}
@@ -64,13 +64,13 @@ export default function LikedScreen() {
         <View style={styles.restaurantMeta}>
           <View style={styles.ratingContainer}>
             <Star size={16} color="#FCD34D" fill="#FCD34D" />
-            <Text style={styles.rating}>{item.rating}</Text>
+            <Text style={styles.rating}>{item.rating || '4.0'}</Text>
           </View>
-          <Text style={styles.priceRange}>{item.priceRange}</Text>
+          <Text style={styles.priceRange}>{item.priceRange || '$$'}</Text>
         </View>
         
         <View style={styles.cuisineContainer}>
-          {item.cuisineType.map((cuisine, index) => (
+          {(item.cuisineType || ['Restaurant']).map((cuisine, index) => (
             <View key={index} style={styles.cuisineTag}>
               <Text style={styles.cuisineText}>{cuisine}</Text>
             </View>
@@ -79,7 +79,7 @@ export default function LikedScreen() {
         
         <View style={styles.locationContainer}>
           <MapPin size={14} color="#64748B" />
-          <Text style={styles.distance}>{item.distance} miles away</Text>
+          <Text style={styles.distance}>{typeof item.distance === 'number' ? `${item.distance} mi` : `${item.distance} away`}</Text>
         </View>
       </View>
     </View>

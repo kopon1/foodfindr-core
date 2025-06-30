@@ -172,24 +172,24 @@ export function RestaurantCard({
           <View style={styles.content}>
             <View style={styles.header}>
               <Text style={styles.name} numberOfLines={1}>
-                {restaurant.name}
+                {restaurant.name || 'Unknown Restaurant'}
               </Text>
               <View style={styles.ratingContainer}>
                 <Star size={16} color="#FCD34D" fill="#FCD34D" />
-                <Text style={styles.rating}>{restaurant.rating}</Text>
+                <Text style={styles.rating}>{restaurant.rating || '4.0'}</Text>
               </View>
             </View>
             
             <View style={styles.meta}>
-              <Text style={styles.priceRange}>{restaurant.priceRange}</Text>
+              <Text style={styles.priceRange}>{restaurant.priceRange || '$$'}</Text>
               <View style={styles.locationContainer}>
                 <MapPin size={14} color="#E2E8F0" />
-                <Text style={styles.distance}>{restaurant.distance} mi</Text>
+                <Text style={styles.distance}>{restaurant.distance} {typeof restaurant.distance === 'number' ? 'mi' : 'away'}</Text>
               </View>
             </View>
             
             <View style={styles.cuisineContainer}>
-              {restaurant.cuisineType.slice(0, 3).map((cuisine, index) => (
+              {(restaurant.cuisineType || ['Restaurant']).slice(0, 3).map((cuisine, index) => (
                 <View key={index} style={styles.cuisineTag}>
                   <Text style={styles.cuisineText}>{cuisine}</Text>
                 </View>
@@ -197,7 +197,7 @@ export function RestaurantCard({
             </View>
             
             <Text style={styles.description} numberOfLines={2}>
-              {restaurant.description}
+              {restaurant.description || `${restaurant.name} - Powered by Foursquare`}
             </Text>
           </View>
         </LinearGradient>
