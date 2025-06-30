@@ -11,6 +11,7 @@ import {
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import AuthLoading from '@/components/AuthLoading';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -36,7 +37,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [user, loading, segments]);
 
   if (loading) {
-    return null; // Show nothing while loading
+    return <AuthLoading message="Checking authentication..." />;
   }
 
   return <>{children}</>;
