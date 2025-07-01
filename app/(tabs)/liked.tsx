@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   Dimensions,
   ActivityIndicator,
-  Alert,
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Heart, Trash2 } from 'lucide-react-native';
@@ -160,7 +160,7 @@ export default function LikedScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <BoltLogo size="small" />
+        <BoltLogo size="medium" />
         <Text style={styles.headerTitle}>Liked</Text>
         {likedRestaurants.length > 0 && (
           <TouchableOpacity 
@@ -183,15 +183,18 @@ export default function LikedScreen() {
         columnWrapperStyle={styles.columnWrapper}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={renderEmptyState}
-        initialNumToRender={9} // Show first 3 rows initially
-        maxToRenderPerBatch={12} // Render 4 rows at a time when scrolling
-        windowSize={7} // Keep 7 rows in memory
-        removeClippedSubviews={true} // Unmount components when outside of window
+        initialNumToRender={9}
+        maxToRenderPerBatch={12}
+        windowSize={7}
+        removeClippedSubviews={true}
         getItemLayout={(data, index) => ({
           length: ITEM_WIDTH + SPACING,
           offset: (ITEM_WIDTH + SPACING) * Math.floor(index / COLUMN_COUNT),
           index,
         })}
+        ListFooterComponent={() => {
+          return null;
+        }}
       />
     </SafeAreaView>
   );
@@ -310,5 +313,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  footer: {
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 80,
+    paddingBottom: 16,
+  },
+  footerLogo: {
+    width: 180,
+    height: 60,
   },
 });

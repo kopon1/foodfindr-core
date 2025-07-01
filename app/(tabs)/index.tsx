@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Image,
-  Alert,
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Heart, X, Star } from 'lucide-react-native';
@@ -272,14 +272,6 @@ export default function DiscoverScreen() {
       
       {renderRestaurantCard()}
       {renderActionButtons()}
-      
-      <View style={styles.footer}>
-        <Image
-          source={require('@/public/logotext_poweredby_360w.png')}
-          style={styles.footerLogo}
-          resizeMode="contain"
-        />
-      </View>
     </SafeAreaView>
   );
 }
@@ -444,14 +436,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
-  },
-  footer: {
-    alignItems: 'center',
-    marginTop: 24,
-    marginBottom: 16,
-  },
-  footerLogo: {
-    width: 180,
-    height: 60,
   },
 });

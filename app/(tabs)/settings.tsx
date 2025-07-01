@@ -8,7 +8,8 @@ import {
   Alert,
   ScrollView,
   Image,
-  ActivityIndicator
+  ActivityIndicator,
+  Linking
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
@@ -280,13 +281,22 @@ export default function SettingsScreen() {
           {settings.map(renderSettingItem)}
         </View>
         
-        <View style={styles.footer}>
+        <TouchableOpacity 
+          onPress={() => Linking.openURL('https://bolt.new')}
+          style={{
+            backgroundColor: 'black',
+            width: '100%',
+            alignItems: 'center',
+            padding: 10,
+            marginTop: 20
+          }}
+        >
           <Image
             source={require('@/public/logotext_poweredby_360w.png')}
-            style={styles.footerLogo}
+            style={{width: '90%', height: 60}}
             resizeMode="contain"
           />
-        </View>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -423,14 +433,5 @@ const styles = StyleSheet.create({
   },
   settingAction: {
     marginLeft: 16,
-  },
-  footer: {
-    alignItems: 'center',
-    marginTop: 24,
-    marginBottom: 16,
-  },
-  footerLogo: {
-    width: 180,
-    height: 60,
   },
 });
