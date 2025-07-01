@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
+import { 
+  View, 
   Text,
-  StyleSheet,
-  Dimensions,
+  StyleSheet, 
+  Dimensions, 
   Animated,
   PanResponder,
   ActivityIndicator,
@@ -149,7 +149,7 @@ export default function DiscoverScreen() {
     }
 
     if (swipedAll) {
-      return (
+    return (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>You've seen all restaurants</Text>
           <TouchableOpacity 
@@ -166,7 +166,7 @@ export default function DiscoverScreen() {
     const restaurant = restaurants[currentIndex];
     
     if (!restaurant) {
-      return (
+    return (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Restaurant data unavailable</Text>
           <TouchableOpacity 
@@ -177,10 +177,10 @@ export default function DiscoverScreen() {
             <Text style={styles.retryButtonText}>Refresh</Text>
           </TouchableOpacity>
         </View>
-      );
-    }
+    );
+  }
 
-    return (
+  return (
       <View style={styles.cardContainer}>
         <Animated.View
           {...panResponder.panHandlers}
@@ -266,12 +266,20 @@ export default function DiscoverScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <BoltLogo size="small" />
-        <Text style={styles.headerTitle}>FoodFindr</Text>
+        <BoltLogo size="medium" />
+        <Text style={styles.headerTitle}>Discover</Text>
       </View>
       
       {renderRestaurantCard()}
       {renderActionButtons()}
+      
+      <View style={styles.footer}>
+        <Image
+          source={require('@/public/logotext_poweredby_360w.png')}
+          style={styles.footerLogo}
+          resizeMode="contain"
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -436,5 +444,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  footer: {
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  footerLogo: {
+    width: 180,
+    height: 60,
   },
 });
