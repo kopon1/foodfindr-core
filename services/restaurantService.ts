@@ -1,102 +1,109 @@
 import { Restaurant, UserLocation } from '@/types/Restaurant';
-import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from './supabaseClient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// Hardcoded restaurant data
-const HARDCODED_RESTAURANTS: Restaurant[] = [
-  {
-    id: '1',
-    name: 'Burger Palace',
-    imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1400&q=80',
-    rating: 4.5,
-    priceRange: '$$',
-    cuisineType: ['American', 'Burgers'],
-    description: 'Delicious burgers and fries in a casual setting',
-    location: { lat: 34.052, lng: -118.243 },
-    distance: 1.2
-  },
-  {
-    id: '2',
-    name: 'Sushi Heaven',
-    imageUrl: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1400&q=80',
-    rating: 4.8,
-    priceRange: '$$$',
-    cuisineType: ['Japanese', 'Sushi'],
-    description: 'Premium sushi and Japanese cuisine',
-    location: { lat: 34.053, lng: -118.244 },
-    distance: 1.5
-  },
-  {
-    id: '3',
-    name: 'Pasta Paradise',
-    imageUrl: 'https://images.unsplash.com/photo-1556761223-4c4282c73f77?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1400&q=80',
-    rating: 4.3,
-    priceRange: '$$',
-    cuisineType: ['Italian', 'Pasta'],
-    description: 'Authentic Italian pasta and wine',
-    location: { lat: 34.055, lng: -118.245 },
-    distance: 1.8
-  },
-  {
-    id: '4',
-    name: 'Taco Town',
-    imageUrl: 'https://images.unsplash.com/photo-1613514785940-daed07799d9b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1400&q=80',
-    rating: 4.2,
-    priceRange: '$',
-    cuisineType: ['Mexican', 'Tacos'],
-    description: 'Street-style tacos and Mexican favorites',
-    location: { lat: 34.056, lng: -118.246 },
-    distance: 2.0
-  },
-  {
-    id: '5',
-    name: 'Curry House',
-    imageUrl: 'https://images.unsplash.com/photo-1585937421612-70a008356cf4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1400&q=80',
-    rating: 4.6,
-    priceRange: '$$',
-    cuisineType: ['Indian', 'Curry'],
-    description: 'Spicy and flavorful Indian curries',
-    location: { lat: 34.057, lng: -118.247 },
-    distance: 2.2
-  },
-  {
-    id: '6',
-    name: 'Pizza Planet',
-    imageUrl: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1400&q=80',
-    rating: 4.0,
-    priceRange: '$$',
-    cuisineType: ['Italian', 'Pizza'],
-    description: 'Wood-fired pizzas with creative toppings',
-    location: { lat: 34.058, lng: -118.248 },
-    distance: 2.5
-  }
-];
-
-const LIKED_STORAGE_KEY = 'likedRestaurants';
+import { dataIngestionService } from './dataIngestionService';
+import { userLikesService } from './userLikesService';
+import { locationService } from './locationService';
+import { supabase } from './supabaseClient';
 
 class RestaurantService {
-  async getNearbyRestaurants(_location?: UserLocation): Promise<Restaurant[]> {
+  private async getCurrentUserId(): Promise<string | null> {
     try {
-      // Return hardcoded restaurants instead of API call
-      return [...HARDCODED_RESTAURANTS];
+      const { data: { user } } = await supabase.auth.getUser();
+      return user?.id || null;
+    } catch (error) {
+      console.error('Error getting current user:', error);
+      return null;
+    }
+  }
+
+  async getNearbyRestaurants(location?: UserLocation): Promise<Restaurant[]> {
+    try {
+      // Get user location if not provided
+      const userLocation = location || await locationService.getCurrentLocation();
+      
+      if (!userLocation) {
+        throw new Error('Location is required to fetch nearby restaurants');
+      }
+
+      console.log('Fetching restaurants for location:', userLocation);
+
+      // Try to get restaurants from database first, with fallback to Foursquare
+      let restaurants = await dataIngestionService.getNearbyRestaurantsFromDatabase(
+        userLocation,
+        10, // 10 mile radius
+        50  // limit to 50 restaurants
+      );
+
+      // If no restaurants in database, fetch from Foursquare and store
+      if (restaurants.length === 0) {
+        console.log('No restaurants in database, fetching from Foursquare...');
+        restaurants = await dataIngestionService.refreshRestaurantData(userLocation, true);
+      }
+
+      return restaurants;
     } catch (error) {
       console.error('Error fetching nearby restaurants:', error);
+      
+      // Fallback to try database one more time
+      try {
+        if (location) {
+          const fallbackRestaurants = await dataIngestionService.getNearbyRestaurantsFromDatabase(location, 25, 50);
+          if (fallbackRestaurants.length > 0) {
+            console.log('Using fallback database restaurants');
+            return fallbackRestaurants;
+          }
+        }
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+      }
+      
+      return [];
+    }
+  }
+
+  async refreshRestaurants(location?: UserLocation, forceRefresh: boolean = false): Promise<Restaurant[]> {
+    try {
+      const userLocation = location || await locationService.getCurrentLocation();
+      
+      if (!userLocation) {
+        throw new Error('Location is required to refresh restaurants');
+      }
+
+      return await dataIngestionService.refreshRestaurantData(userLocation, forceRefresh);
+    } catch (error) {
+      console.error('Error refreshing restaurants:', error);
+      throw error;
+    }
+  }
+
+  async searchRestaurants(query: string, location?: UserLocation): Promise<Restaurant[]> {
+    try {
+      const userLocation = location || await locationService.getCurrentLocation();
+      
+      if (!userLocation) {
+        throw new Error('Location is required to search restaurants');
+      }
+
+      return await dataIngestionService.searchRestaurantsInDatabase(
+        query,
+        userLocation,
+        25, // 25 mile radius for search
+        50  // limit to 50 results
+      );
+    } catch (error) {
+      console.error('Error searching restaurants:', error);
       return [];
     }
   }
 
   async likeRestaurant(restaurant: Restaurant): Promise<void> {
     try {
-      // Get current liked restaurants from storage
-      const currentLikedJson = await AsyncStorage.getItem(LIKED_STORAGE_KEY);
-      const currentLiked: Restaurant[] = currentLikedJson ? JSON.parse(currentLikedJson) : [];
+      const userId = await this.getCurrentUserId();
       
-      // Check if restaurant is already liked
-      if (!currentLiked.some(r => r.id === restaurant.id)) {
-        // Add to liked restaurants
-        const updatedLiked = [...currentLiked, restaurant];
-        await AsyncStorage.setItem(LIKED_STORAGE_KEY, JSON.stringify(updatedLiked));
+      if (!userId) {
+        throw new Error('User must be logged in to like restaurants');
       }
+
+      await userLikesService.likeRestaurant(restaurant.id, userId);
     } catch (error) {
       console.error('Error liking restaurant:', error);
       throw error;
@@ -105,8 +112,14 @@ class RestaurantService {
 
   async getLikedRestaurants(): Promise<Restaurant[]> {
     try {
-      const likedJson = await AsyncStorage.getItem(LIKED_STORAGE_KEY);
-      return likedJson ? JSON.parse(likedJson) : [];
+      const userId = await this.getCurrentUserId();
+      
+      if (!userId) {
+        console.log('User not logged in, returning empty liked restaurants');
+        return [];
+      }
+
+      return await userLikesService.getUserLikedRestaurants(userId);
     } catch (error) {
       console.error('Error getting liked restaurants:', error);
       return [];
@@ -115,11 +128,13 @@ class RestaurantService {
 
   async removeLikedRestaurant(restaurantId: string): Promise<void> {
     try {
-      const currentLikedJson = await AsyncStorage.getItem(LIKED_STORAGE_KEY);
-      const currentLiked: Restaurant[] = currentLikedJson ? JSON.parse(currentLikedJson) : [];
+      const userId = await this.getCurrentUserId();
       
-      const updatedLiked = currentLiked.filter(r => r.id !== restaurantId);
-      await AsyncStorage.setItem(LIKED_STORAGE_KEY, JSON.stringify(updatedLiked));
+      if (!userId) {
+        throw new Error('User must be logged in to unlike restaurants');
+      }
+
+      await userLikesService.unlikeRestaurant(restaurantId, userId);
     } catch (error) {
       console.error('Error removing liked restaurant:', error);
       throw error;
@@ -128,10 +143,46 @@ class RestaurantService {
 
   async clearAllLikedRestaurants(): Promise<void> {
     try {
-      await AsyncStorage.setItem(LIKED_STORAGE_KEY, JSON.stringify([]));
+      const userId = await this.getCurrentUserId();
+      
+      if (!userId) {
+        throw new Error('User must be logged in to clear liked restaurants');
+      }
+
+      await userLikesService.clearAllLikedRestaurants(userId);
     } catch (error) {
       console.error('Error clearing liked restaurants:', error);
       throw error;
+    }
+  }
+
+  async isRestaurantLiked(restaurantId: string): Promise<boolean> {
+    try {
+      const userId = await this.getCurrentUserId();
+      
+      if (!userId) {
+        return false;
+      }
+
+      return await userLikesService.isRestaurantLiked(restaurantId, userId);
+    } catch (error) {
+      console.error('Error checking if restaurant is liked:', error);
+      return false;
+    }
+  }
+
+  async getLikedRestaurantsCount(): Promise<number> {
+    try {
+      const userId = await this.getCurrentUserId();
+      
+      if (!userId) {
+        return 0;
+      }
+
+      return await userLikesService.getLikedRestaurantsCount(userId);
+    } catch (error) {
+      console.error('Error getting liked restaurants count:', error);
+      return 0;
     }
   }
 }

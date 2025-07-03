@@ -123,9 +123,16 @@ export default function LikedScreen() {
         <Text style={styles.restaurantName} numberOfLines={1}>
           {item.name}
         </Text>
+        <View style={styles.metaInfo}>
+          <Text style={styles.rating}>★ {item.rating}</Text>
+          <Text style={styles.priceRange}>{item.priceRange}</Text>
+        </View>
         <Text style={styles.cuisineType} numberOfLines={1}>
           {item.cuisineType.join(', ')}
         </Text>
+        {item.distance && (
+          <Text style={styles.distance}>{item.distance} mi away</Text>
+        )}
       </TouchableOpacity>
     );
   };
@@ -272,11 +279,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#1A202C',
+    marginBottom: 4,
+  },
+  metaInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 2,
   },
-  cuisineType: {
+  rating: {
     fontSize: 12,
+    fontWeight: '500',
+    color: '#FFB800',
+  },
+  priceRange: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#4ECDC4',
+  },
+  cuisineType: {
+    fontSize: 11,
     color: '#64748B',
+    marginBottom: 2,
+  },
+  distance: {
+    fontSize: 10,
+    color: '#94A3B8',
   },
   emptyContainer: {
     flex: 1,

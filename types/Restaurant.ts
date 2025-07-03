@@ -11,6 +11,17 @@ export interface Restaurant {
     lng: number;
   };
   distance: number;
+  // Additional Foursquare fields
+  foursquareId?: string;
+  address?: string;
+  phone?: string;
+  website?: string;
+  verified?: boolean;
+  hours?: string;
+  isOpen?: boolean;
+  // Database fields
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface UserLocation {

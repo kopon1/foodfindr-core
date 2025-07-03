@@ -34,16 +34,42 @@ export default function DiscoverScreen() {
     fetchRestaurants();
   }, []);
 
-  const fetchRestaurants = async () => {
+  const fetchRestaurants = async (forceRefresh: boolean = false) => {
     try {
       setIsLoading(true);
-      const fetchedRestaurants = await restaurantService.getNearbyRestaurants();
+      let fetchedRestaurants: Restaurant[] = [];
+      
+      if (forceRefresh) {
+        fetchedRestaurants = await restaurantService.refreshRestaurants(undefined, true);
+      } else {
+        fetchedRestaurants = await restaurantService.getNearbyRestaurants();
+      }
+      
       setRestaurants(fetchedRestaurants);
       setCurrentIndex(0);
       setSwipedAll(false);
+      
+      if (fetchedRestaurants.length === 0) {
+        Alert.alert(
+          'No Restaurants Found', 
+          'No restaurants were found in your area. This might be due to location permissions or network issues.',
+          [
+            { text: 'Retry', onPress: () => fetchRestaurants(true) },
+            { text: 'OK', style: 'cancel' }
+          ]
+        );
+      }
     } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', 'Failed to fetch restaurants');
+      
+      const errorMessage = err.message?.includes('Location') 
+        ? 'Location access is required to find restaurants nearby. Please enable location permissions and try again.'
+        : 'Failed to fetch restaurants. Please check your internet connection and try again.';
+      
+      Alert.alert('Error', errorMessage, [
+        { text: 'Retry', onPress: () => fetchRestaurants(true) },
+        { text: 'OK', style: 'cancel' }
+      ]);
       console.error('Error fetching restaurants:', err);
     } finally {
       setIsLoading(false);
@@ -139,7 +165,7 @@ export default function DiscoverScreen() {
           <Text style={styles.emptyText}>No restaurants found</Text>
           <TouchableOpacity 
             style={styles.retryButton} 
-            onPress={fetchRestaurants}
+            onPress={() => fetchRestaurants(true)}
             activeOpacity={0.7}
           >
             <Text style={styles.retryButtonText}>Refresh</Text>
@@ -154,7 +180,7 @@ export default function DiscoverScreen() {
           <Text style={styles.emptyText}>You've seen all restaurants</Text>
           <TouchableOpacity 
             style={styles.retryButton} 
-            onPress={fetchRestaurants}
+            onPress={() => fetchRestaurants(true)}
             activeOpacity={0.7}
           >
             <Text style={styles.retryButtonText}>Start Over</Text>
@@ -171,7 +197,7 @@ export default function DiscoverScreen() {
           <Text style={styles.emptyText}>Restaurant data unavailable</Text>
           <TouchableOpacity 
             style={styles.retryButton} 
-            onPress={fetchRestaurants}
+            onPress={() => fetchRestaurants(true)}
             activeOpacity={0.7}
           >
             <Text style={styles.retryButtonText}>Refresh</Text>
@@ -206,8 +232,18 @@ export default function DiscoverScreen() {
             <View style={styles.ratingContainer}>
               <Star size={16} color="#FFB800" fill="#FFB800" />
               <Text style={styles.ratingText}>
-                {restaurant.rating} ({restaurant.cuisineType.length} cuisines)
+                {restaurant.rating}
               </Text>
+              {restaurant.verified && (
+                <View style={styles.verifiedBadge}>
+                  <Text style={styles.verifiedText}>✓</Text>
+                </View>
+              )}
+            </View>
+            
+            <View style={styles.metaRow}>
+              <Text style={styles.priceRange}>{restaurant.priceRange}</Text>
+              <Text style={styles.distance}>{restaurant.distance} mi away</Text>
             </View>
             
             <View style={styles.categoryContainer}>
@@ -436,5 +472,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  verifiedBadge: {
+    marginLeft: 8,
+    backgroundColor: '#4ECDC4',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  verifiedText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  priceRange: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4ECDC4',
+  },
+  distance: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#64748B',
   },
 });
