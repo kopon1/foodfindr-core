@@ -18,10 +18,15 @@ import {
   Info, 
   ChevronRight,
   User,
-  LogOut
+  LogOut,
+  Wifi,
+  Bug,
+  RefreshCw
 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { restaurantService } from '@/services/restaurantService';
+import { locationService } from '@/services/locationService';
+import { networkService } from '@/services/networkService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -154,6 +159,88 @@ export default function SettingsScreen() {
     router.replace('/auth/login');
   };
 
+  const handleConnectivityDiagnosis = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    try {
+      setIsLoading(true);
+      
+      // Initialize network service
+      await networkService.initialize();
+      
+      // Run diagnostics
+      const diagnosis = await networkService.diagnoseConnectivity();
+      const locationInfo = locationService.getLocationDebugInfo();
+      
+      // Format results
+      const networkStatus = diagnosis.network.isConnected ? '✅ Connected' : '❌ Disconnected';
+      const internetStatus = diagnosis.network.isInternetReachable ? '✅ Reachable' : '❌ Not Reachable';
+      const foursquareStatus = diagnosis.apis.foursquare ? '✅ Working' : '❌ Failed';
+      const supabaseStatus = diagnosis.apis.supabase ? '✅ Working' : '❌ Failed';
+      
+      const message = `
+NETWORK STATUS:
+${networkStatus}
+Internet: ${internetStatus}
+Type: ${diagnosis.network.type}
+
+API CONNECTIVITY:
+Foursquare: ${foursquareStatus}
+Supabase: ${supabaseStatus}
+
+DEVICE INFO:
+Platform: ${diagnosis.platform}
+Development Mode: ${locationInfo.isDevelopmentMode ? 'Yes' : 'No'}
+Emulator: ${locationInfo.isEmulator ? 'Yes' : 'No'}
+Device: ${locationInfo.deviceName || 'Unknown'}
+
+${diagnosis.recommendations.length > 0 ? '\nRECOMMENDATIONS:\n' + diagnosis.recommendations.join('\n') : ''}
+      `.trim();
+      
+      Alert.alert('Connectivity Diagnosis', message);
+    } catch (error) {
+      console.error('Error running connectivity diagnosis:', error);
+      Alert.alert('Error', 'Failed to run connectivity diagnosis');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTestLocation = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    try {
+      setIsLoading(true);
+      
+      // Get location debug info
+      const debugInfo = locationService.getLocationDebugInfo();
+      
+      // Try to get location
+      const location = await locationService.getCurrentLocation(true); // Force test location
+      
+      const message = `
+LOCATION DEBUG INFO:
+Development Mode: ${debugInfo.isDevelopmentMode ? 'Yes' : 'No'}
+Emulator Detected: ${debugInfo.isEmulator ? 'Yes' : 'No'}
+Platform: ${debugInfo.platform}
+Device: ${debugInfo.deviceName || 'Unknown'}
+
+TEST LOCATION:
+Latitude: ${location.lat}
+Longitude: ${location.lng}
+
+This will use a test location for development/emulator testing.
+      `.trim();
+      
+      Alert.alert('Location Test', message);
+    } catch (error) {
+      console.error('Error testing location:', error);
+      Alert.alert('Error', 'Failed to test location');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const settings: SettingsItem[] = [
     {
       id: 'location',
@@ -171,6 +258,22 @@ export default function SettingsScreen() {
       icon: <Trash2 size={24} color="#EF4444" />,
       type: 'action',
       onPress: handleClearLikedRestaurants,
+    },
+    {
+      id: 'connectivity',
+      title: 'Connectivity Diagnosis',
+      subtitle: 'Test network and API connections',
+      icon: <Wifi size={24} color="#0EA5E9" />,
+      type: 'action',
+      onPress: handleConnectivityDiagnosis,
+    },
+    {
+      id: 'testlocation',
+      title: 'Test Location',
+      subtitle: 'Debug location services',
+      icon: <Bug size={24} color="#8B5CF6" />,
+      type: 'action',
+      onPress: handleTestLocation,
     },
     {
       id: 'about',

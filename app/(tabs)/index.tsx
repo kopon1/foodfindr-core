@@ -1,42 +1,61 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text,
   StyleSheet, 
   Dimensions, 
-  Animated,
-  PanResponder,
   ActivityIndicator,
   TouchableOpacity,
-  Image,
-  Alert
+  Alert,
+  StatusBar,
+  Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Heart, X, Star } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import { RotateCcw, Settings, Zap, TrendingUp } from 'lucide-react-native';
 import { Restaurant } from '@/types/Restaurant';
 import { restaurantService } from '@/services/restaurantService';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import BoltLogo from '@/components/BoltLogo';
+import { TinderCard } from '@/components/TinderCard';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const SWIPE_THRESHOLD = 120;
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function DiscoverScreen() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const position = useRef(new Animated.ValueXY()).current;
-  const { user } = useAuth();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [swipedAll, setSwipedAll] = useState(false);
+  const [likedCount, setLikedCount] = useState(0);
+  
+  const { user } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     fetchRestaurants();
+    loadLikedCount();
   }, []);
+
+  const loadLikedCount = async () => {
+    try {
+      const count = await restaurantService.getLikedRestaurantsCount();
+      setLikedCount(count);
+    } catch (error) {
+      console.error('Error loading liked count:', error);
+    }
+  };
 
   const fetchRestaurants = async (forceRefresh: boolean = false) => {
     try {
-      setIsLoading(true);
+      if (forceRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
+      
       let fetchedRestaurants: Restaurant[] = [];
       
       if (forceRefresh) {
@@ -49,112 +68,77 @@ export default function DiscoverScreen() {
       setCurrentIndex(0);
       setSwipedAll(false);
       
-      if (fetchedRestaurants.length === 0) {
+      if (fetchedRestaurants.length === 0 && !forceRefresh) {
+        // Only show error for initial load, not refresh
         Alert.alert(
           'No Restaurants Found', 
-          'No restaurants were found in your area. This might be due to location permissions or network issues.',
-          [
-            { text: 'Retry', onPress: () => fetchRestaurants(true) },
-            { text: 'OK', style: 'cancel' }
-          ]
+          'We\'re having trouble finding restaurants. Using sample data for now!',
+          [{ text: 'OK', style: 'default' }]
         );
       }
     } catch (err: any) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      
-      const errorMessage = err.message?.includes('Location') 
-        ? 'Location access is required to find restaurants nearby. Please enable location permissions and try again.'
-        : 'Failed to fetch restaurants. Please check your internet connection and try again.';
-      
-      Alert.alert('Error', errorMessage, [
-        { text: 'Retry', onPress: () => fetchRestaurants(true) },
-        { text: 'OK', style: 'cancel' }
-      ]);
       console.error('Error fetching restaurants:', err);
+      
+      if (!forceRefresh) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert('Connection Issue', 'Using sample restaurants for demo!', [
+          { text: 'OK', style: 'default' }
+        ]);
+      }
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
-  const handleSwipe = (direction: 'left' | 'right') => {
+  const handleSwipe = async (direction: 'left' | 'right') => {
     const restaurant = restaurants[currentIndex];
     
     if (direction === 'right' && restaurant) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      restaurantService.likeRestaurant(restaurant)
-        .then(() => {
-          console.log('Restaurant liked:', restaurant.name);
-        })
-        .catch(error => {
-          console.error('Error liking restaurant:', error);
-        });
-    } else {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      try {
+        await restaurantService.likeRestaurant(restaurant);
+        setLikedCount(prev => prev + 1);
+        console.log('Restaurant liked:', restaurant.name);
+      } catch (error) {
+        console.error('Error liking restaurant:', error);
+      }
     }
     
-    Animated.timing(position, {
-      toValue: { x: direction === 'right' ? SCREEN_WIDTH : -SCREEN_WIDTH, y: 0 },
-      duration: 300,
-      useNativeDriver: false,
-    }).start(() => {
-      position.setValue({ x: 0, y: 0 });
-      setCurrentIndex((prevIndex) => {
-        const nextIndex = prevIndex + 1;
-        if (nextIndex >= restaurants.length) {
-          setSwipedAll(true);
-          return prevIndex; // Keep at the last index
-        }
-        return nextIndex;
-      });
+    // Move to next card
+    setCurrentIndex((prevIndex) => {
+      const nextIndex = prevIndex + 1;
+      if (nextIndex >= restaurants.length) {
+        setSwipedAll(true);
+        return prevIndex;
+      }
+      return nextIndex;
     });
   };
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, gesture) => {
-        position.setValue({ x: gesture.dx, y: 0 });
-      },
-      onPanResponderRelease: (_, gesture) => {
-        if (gesture.dx > SWIPE_THRESHOLD) {
-          handleSwipe('right');
-        } else if (gesture.dx < -SWIPE_THRESHOLD) {
-          handleSwipe('left');
-        } else {
-          Animated.spring(position, {
-            toValue: { x: 0, y: 0 },
-            friction: 5,
-            useNativeDriver: false,
-          }).start();
-        }
-      },
-    })
-  ).current;
+  const handleRefresh = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    fetchRestaurants(true);
+  };
 
-  const rotate = position.x.interpolate({
-    inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
-    outputRange: ['-10deg', '0deg', '10deg'],
-    extrapolate: 'clamp',
-  });
+  const handleUndo = () => {
+    if (currentIndex > 0) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setCurrentIndex(prev => prev - 1);
+      setSwipedAll(false);
+    }
+  };
 
-  const likeOpacity = position.x.interpolate({
-    inputRange: [0, SWIPE_THRESHOLD],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-
-  const dislikeOpacity = position.x.interpolate({
-    inputRange: [-SWIPE_THRESHOLD, 0],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
-
-  const renderRestaurantCard = () => {
+  const renderCardStack = () => {
     if (isLoading) {
       return (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF6B35" />
-          <Text style={styles.loadingText}>Finding restaurants...</Text>
+          <LinearGradient
+            colors={['#FF6B6B', '#4ECDC4']}
+            style={styles.loadingGradient}
+          >
+            <ActivityIndicator size="large" color="#FFFFFF" />
+            <Text style={styles.loadingText}>Finding amazing restaurants...</Text>
+          </LinearGradient>
         </View>
       );
     }
@@ -162,345 +146,328 @@ export default function DiscoverScreen() {
     if (restaurants.length === 0) {
       return (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No restaurants found</Text>
+          <Text style={styles.emptyIcon}>🍽️</Text>
+          <Text style={styles.emptyTitle}>No restaurants found</Text>
+          <Text style={styles.emptySubtitle}>Try refreshing to load new options</Text>
           <TouchableOpacity 
             style={styles.retryButton} 
-            onPress={() => fetchRestaurants(true)}
-            activeOpacity={0.7}
+            onPress={handleRefresh}
+            activeOpacity={0.8}
           >
-            <Text style={styles.retryButtonText}>Refresh</Text>
+            <LinearGradient
+              colors={['#FF6B6B', '#FF8E53']}
+              style={styles.retryGradient}
+            >
+              <Text style={styles.retryButtonText}>Refresh</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       );
     }
 
     if (swipedAll) {
-    return (
+      return (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>You've seen all restaurants</Text>
+          <Text style={styles.emptyIcon}>🎉</Text>
+          <Text style={styles.emptyTitle}>All done!</Text>
+          <Text style={styles.emptySubtitle}>You've seen all restaurants in your area</Text>
           <TouchableOpacity 
             style={styles.retryButton} 
-            onPress={() => fetchRestaurants(true)}
-            activeOpacity={0.7}
+            onPress={handleRefresh}
+            activeOpacity={0.8}
           >
-            <Text style={styles.retryButtonText}>Start Over</Text>
+            <LinearGradient
+              colors={['#4ECDC4', '#44A08D']}
+              style={styles.retryGradient}
+            >
+              <Text style={styles.retryButtonText}>Start Over</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       );
     }
 
-    const restaurant = restaurants[currentIndex];
+    // Render stack of cards (current + next 2)
+    const cardsToShow = restaurants.slice(currentIndex, currentIndex + 3);
     
-    if (!restaurant) {
     return (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Restaurant data unavailable</Text>
-          <TouchableOpacity 
-            style={styles.retryButton} 
-            onPress={() => fetchRestaurants(true)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.retryButtonText}>Refresh</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={styles.cardStack}>
+        {cardsToShow.map((restaurant, index) => (
+          <TinderCard
+            key={`${restaurant.id}-${currentIndex + index}`}
+            restaurant={restaurant}
+            isTop={index === 0}
+            onSwipe={handleSwipe}
+            style={[
+              styles.cardPosition,
+              { 
+                zIndex: cardsToShow.length - index,
+                transform: [
+                  { scale: 1 - (index * 0.05) },
+                  { translateY: index * 8 }
+                ]
+              }
+            ]}
+            index={currentIndex + index}
+          />
+        ))}
+      </View>
     );
-  }
+  };
 
   return (
-      <View style={styles.cardContainer}>
-        <Animated.View
-          {...panResponder.panHandlers}
-          style={[
-            styles.card,
-            {
-              transform: [
-                { translateX: position.x },
-                { rotate },
-              ],
-            },
-          ]}
-        >
-          <Image
-            source={{ uri: restaurant.imageUrl }}
-            style={styles.cardImage}
-            resizeMode="cover"
-          />
-          
-          <View style={styles.cardContent}>
-            <Text style={styles.restaurantName}>{restaurant.name}</Text>
-            
-            <View style={styles.ratingContainer}>
-              <Star size={16} color="#FFB800" fill="#FFB800" />
-              <Text style={styles.ratingText}>
-                {restaurant.rating}
-              </Text>
-              {restaurant.verified && (
-                <View style={styles.verifiedBadge}>
-                  <Text style={styles.verifiedText}>✓</Text>
+    <>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <LinearGradient
+        colors={['#667eea', '#764ba2']}
+        style={styles.container}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          {/* Header */}
+          <BlurView intensity={20} style={styles.header}>
+            <View style={styles.headerContent}>
+              <TouchableOpacity 
+                onPress={() => router.push('/settings')}
+                style={styles.headerButton}
+              >
+                <Settings size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+              
+              <View style={styles.titleContainer}>
+                <Text style={styles.appTitle}>FoodFindr</Text>
+                <Text style={styles.tagline}>Swipe • Taste • Love</Text>
+              </View>
+              
+              <TouchableOpacity 
+                onPress={() => router.push('/liked')}
+                style={styles.headerButton}
+              >
+                <View style={styles.likedBadge}>
+                  <TrendingUp size={20} color="#FFFFFF" />
+                  {likedCount > 0 && (
+                    <View style={styles.badgeCount}>
+                      <Text style={styles.badgeText}>{likedCount}</Text>
+                    </View>
+                  )}
                 </View>
-              )}
+              </TouchableOpacity>
             </View>
-            
-            <View style={styles.metaRow}>
-              <Text style={styles.priceRange}>{restaurant.priceRange}</Text>
-              <Text style={styles.distance}>{restaurant.distance} mi away</Text>
-            </View>
-            
-            <View style={styles.categoryContainer}>
-              {restaurant.cuisineType.map((cuisine, index) => (
-                <View key={index} style={styles.categoryTag}>
-                  <Text style={styles.categoryText}>{cuisine}</Text>
-                </View>
-              ))}
-            </View>
-            
-            {restaurant.description && (
-              <Text style={styles.description} numberOfLines={2}>
-                {restaurant.description}
-              </Text>
-            )}
+          </BlurView>
+
+          {/* Card Stack */}
+          <View style={styles.content}>
+            {renderCardStack()}
           </View>
 
-          <Animated.View style={[styles.likeOverlay, { opacity: likeOpacity }]}>
-            <Heart size={80} color="#FFFFFF" fill="#FFFFFF" />
-          </Animated.View>
-
-          <Animated.View style={[styles.dislikeOverlay, { opacity: dislikeOpacity }]}>
-            <X size={80} color="#FFFFFF" />
-          </Animated.View>
-        </Animated.View>
-      </View>
-    );
-  };
-
-  const renderActionButtons = () => {
-    if (isLoading || restaurants.length === 0 || swipedAll || currentIndex >= restaurants.length) {
-      return null;
-    }
-
-    return (
-      <View style={styles.actionContainer}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.dislikeButton]}
-          onPress={() => handleSwipe('left')}
-          activeOpacity={0.7}
-        >
-          <X size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.actionButton, styles.likeButton]}
-          onPress={() => handleSwipe('right')}
-          activeOpacity={0.7}
-        >
-          <Heart size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <BoltLogo size="medium" />
-        <Text style={styles.headerTitle}>Discover</Text>
-      </View>
-      
-      {renderRestaurantCard()}
-      {renderActionButtons()}
-    </SafeAreaView>
+          {/* Bottom Controls */}
+          {!isLoading && !swipedAll && restaurants.length > 0 && (
+            <BlurView intensity={20} style={styles.bottomControls}>
+              <TouchableOpacity
+                style={[styles.controlButton, currentIndex === 0 && styles.controlButtonDisabled]}
+                onPress={handleUndo}
+                disabled={currentIndex === 0}
+                activeOpacity={0.8}
+              >
+                <RotateCcw size={20} color={currentIndex === 0 ? "#666" : "#FFFFFF"} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.controlButton, styles.refreshButton]}
+                onPress={handleRefresh}
+                activeOpacity={0.8}
+              >
+                {isRefreshing ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Zap size={20} color="#FFFFFF" />
+                )}
+              </TouchableOpacity>
+            </BlurView>
+          )}
+        </SafeAreaView>
+      </LinearGradient>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+  },
+  safeArea: {
+    flex: 1,
   },
   header: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  headerContent: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
-    paddingBottom: 8,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FF6B35',
-    marginLeft: 12,
+  titleContainer: {
+    alignItems: 'center',
   },
-  cardContainer: {
+  appTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  tagline: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+    marginTop: 2,
+    letterSpacing: 1,
+  },
+  likedBadge: {
+    position: 'relative',
+  },
+  badgeCount: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#FF6B6B',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  content: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingBottom: 100,
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
-  card: {
+  cardStack: {
     width: '100%',
     height: '100%',
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-    overflow: 'hidden',
-  },
-  cardImage: {
-    width: '100%',
-    height: '60%',
-  },
-  cardContent: {
-    padding: 20,
-  },
-  restaurantName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1A202C',
-    marginBottom: 8,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  ratingText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#4A5568',
-    marginLeft: 6,
-  },
-  description: {
-    fontSize: 14,
-    color: '#64748B',
-    marginTop: 8,
-  },
-  categoryContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  categoryTag: {
-    backgroundColor: '#F7FAFC',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  categoryText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#4A5568',
-  },
-  actionContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    position: 'absolute',
-    bottom: 40,
-    left: 0,
-    right: 0,
-  },
-  actionButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  likeButton: {
-    backgroundColor: '#FF6B35',
-  },
-  dislikeButton: {
-    backgroundColor: '#EF4444',
-  },
-  likeOverlay: {
+  cardPosition: {
     position: 'absolute',
-    top: 50,
-    right: 40,
-    transform: [{ rotate: '20deg' }],
-  },
-  dislikeOverlay: {
-    position: 'absolute',
-    top: 50,
-    left: 40,
-    transform: [{ rotate: '-20deg' }],
+    width: '100%',
+    height: '85%',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    width: '100%',
+  },
+  loadingGradient: {
+    paddingVertical: 40,
+    paddingHorizontal: 60,
+    borderRadius: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
   },
   loadingText: {
     marginTop: 16,
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#64748B',
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 40,
   },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#64748B',
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 24,
   },
   retryButton: {
-    backgroundColor: '#FF6B35',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    shadowColor: '#FF6B35',
+    borderRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  retryGradient: {
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 25,
+    alignItems: 'center',
+  },
+  retryButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  bottomControls: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 40,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  controlButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 6,
   },
-  retryButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+  controlButtonDisabled: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
-  verifiedBadge: {
-    marginLeft: 8,
-    backgroundColor: '#4ECDC4',
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  verifiedText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  priceRange: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#4ECDC4',
-  },
-  distance: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#64748B',
+  refreshButton: {
+    backgroundColor: 'rgba(78, 205, 196, 0.8)',
   },
 });

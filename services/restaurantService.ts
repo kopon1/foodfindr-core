@@ -2,6 +2,7 @@ import { Restaurant, UserLocation } from '@/types/Restaurant';
 import { dataIngestionService } from './dataIngestionService';
 import { userLikesService } from './userLikesService';
 import { locationService } from './locationService';
+import { mockDataService } from './mockDataService';
 import { supabase } from './supabaseClient';
 
 class RestaurantService {
@@ -36,7 +37,15 @@ class RestaurantService {
       // If no restaurants in database, fetch from Foursquare and store
       if (restaurants.length === 0) {
         console.log('No restaurants in database, fetching from Foursquare...');
-        restaurants = await dataIngestionService.refreshRestaurantData(userLocation, true);
+        try {
+          restaurants = await dataIngestionService.refreshRestaurantData(userLocation, true);
+        } catch (apiError) {
+          console.error('Foursquare API failed:', apiError);
+          
+          // If API fails, use robust mock data
+          console.log('API failed: using rich mock data for better UX');
+          restaurants = mockDataService.generateRestaurants(userLocation, 25);
+        }
       }
 
       return restaurants;
@@ -56,9 +65,16 @@ class RestaurantService {
         console.error('Fallback also failed:', fallbackError);
       }
       
+      // Last resort: use rich mock data for better UX
+      if (location) {
+        console.log('Last resort: using rich mock data for better UX');
+        return mockDataService.generateRestaurants(location, 20);
+      }
+      
       return [];
     }
   }
+
 
   async refreshRestaurants(location?: UserLocation, forceRefresh: boolean = false): Promise<Restaurant[]> {
     try {
@@ -68,7 +84,12 @@ class RestaurantService {
         throw new Error('Location is required to refresh restaurants');
       }
 
-      return await dataIngestionService.refreshRestaurantData(userLocation, forceRefresh);
+      try {
+        return await dataIngestionService.refreshRestaurantData(userLocation, forceRefresh);
+      } catch (apiError) {
+        console.error('API refresh failed, using mock data:', apiError);
+        return mockDataService.generateRestaurants(userLocation, 30);
+      }
     } catch (error) {
       console.error('Error refreshing restaurants:', error);
       throw error;
