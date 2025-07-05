@@ -9,9 +9,11 @@ FoodFindr is a Tinder-style restaurant discovery app built with React Native, Ex
 ## Development Commands
 
 - `npm run dev` - Start the Expo development server (with telemetry disabled)
+- `npm run dev:tunnel` - Start with tunnel for external device testing
 - `npm run build:web` - Build the web version using Expo export
 - `npm run lint` - Run Expo linting
 - `npm run test` - Run Jest tests
+- `jest <test-file>` - Run individual test file
 
 ## Architecture
 
@@ -55,9 +57,11 @@ FoodFindr is a Tinder-style restaurant discovery app built with React Native, Ex
 
 ## Testing
 
-- Jest configured for React Native environment
+- Jest configured for React Native environment with `react-native` preset
 - Test setup in `jest.setup.js`
-- Path mapping configured for `@/` imports
+- Path mapping configured for `@/` imports via `moduleNameMapping`
+- Transform patterns configured for React Native, Expo, and Lucide modules
+- Testing library: `@testing-library/react-native` for component testing
 - Run individual tests with `jest <test-file>`
 
 ## Supabase Integration
@@ -77,7 +81,23 @@ Key edge functions:
 ## Development Notes
 
 - The app uses `useFrameworkReady` hook for proper initialization
-- Authentication state is cached for instant UI display on app startup
+- Authentication state is cached with AsyncStorage for instant UI display on app startup
 - Location permissions are required for restaurant discovery
 - Haptic feedback is implemented for user interactions
 - The app supports both development and production Supabase environments
+- Splash screen is managed manually with `expo-splash-screen`
+- TypeScript strict mode is enabled
+- Path aliases configured with `@/` pointing to project root
+
+## Database Schema
+
+The Supabase database includes:
+- **restaurants**: Core restaurant data (name, image, rating, cuisine types)
+- **user_likes**: Tracks user preferences and liked restaurants
+- **users**: Extended user profiles beyond basic auth
+
+## Scripts and Utilities
+
+- `scripts/apply-migrations.ts` - Database migration utility
+- Migration files in `supabase/migrations/` for database schema
+- Mock data service for development testing
